@@ -781,11 +781,30 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
             {/* Quick View Button */}
             <button className="quick-view-btn">👁 {t.quickView}</button>
 
-            {/* Itinerary Days */}
+            {/* Itinerary Days Counter */}
+            {tripData.itinerary && tripData.itinerary.length > 0 && (
+              <div style={{
+                padding: '0.75rem 1rem',
+                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                fontSize: '0.9375rem',
+                fontWeight: '500',
+                color: '#4f46e5',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <span style={{ fontSize: '1.25rem' }}>📅</span>
+                <span>{tripData.itinerary.length} {tripData.itinerary.length === 1 ? 'Day' : 'Days'} Itinerary</span>
+              </div>
+            )}
+
+            {/* Itinerary Days - Displaying all days */}
             {tripData.itinerary && tripData.itinerary.length > 0 && (
               <div className="trip-itinerary">
                 {tripData.itinerary.map((day, index) => (
-                  <div key={index} className={`day-card ${expandedDays[index] ? 'expanded' : ''}`}>
+                  <div key={`day-${day.day || index}`} className={`day-card ${expandedDays[index] ? 'expanded' : ''}`}>
                     <div 
                       className="day-card-header"
                       onClick={() => toggleDay(index)}

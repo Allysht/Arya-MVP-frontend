@@ -283,11 +283,30 @@ const Chat = ({ userPreferences }) => {
         const endMonth = rangeMatch[4];
         updated.dates = `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
       } else {
-        // Single date pattern
-        const datePattern = /(\d{1,2})\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)/i;
+        // Single date pattern (with day number)
+        const datePattern = /(\d{1,2})(?:st|nd|rd|th)?\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)/i;
         const dateMatch = message.match(datePattern);
         if (dateMatch) {
           updated.dates = dateMatch[0];
+        } else {
+          // Month-only pattern (no specific day mentioned) - default to 1st
+          const monthOnlyPattern = /\b(in|în|during|pentru)\s+(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)\b/i;
+          const monthOnlyMatch = message.match(monthOnlyPattern);
+          if (monthOnlyMatch) {
+            const month = monthOnlyMatch[2];
+            // Default to 1st of the month
+            updated.dates = `1 ${month}`;
+            console.log(`📅 Month-only detected: "${month}" → Defaulting to 1st ${month}`);
+          } else {
+            // Try to detect standalone month mentions (e.g., "March", "martie")
+            const standaloneMonthPattern = /\b(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)\b/i;
+            const standaloneMatch = message.match(standaloneMonthPattern);
+            if (standaloneMatch) {
+              const month = standaloneMatch[1];
+              updated.dates = `1 ${month}`;
+              console.log(`📅 Standalone month detected: "${month}" → Defaulting to 1st ${month}`);
+            }
+          }
         }
       }
     }
@@ -531,6 +550,7 @@ const Chat = ({ userPreferences }) => {
     }
     
     // If we have a start date and duration, calculate end date
+    // Note: Month-only dates (e.g., "March") are converted to "1 March" by extractInfoFromMessage
     if (dates && duration) {
       try {
         // Extract number of days from duration
@@ -595,10 +615,74 @@ const Chat = ({ userPreferences }) => {
       const userLanguage = languageNames[userPreferences?.language] || 'English';
       
       // Extract number of days from duration
-      const daysMatch = duration.match(/(\d+)/);
-      const numDays = daysMatch ? parseInt(daysMatch[1]) : 5;
+      // Handle weeks conversion: "2 săptămâni" = 14 days, "2 weeks" = 14 days
+      let numDays = 5; // Default
+      
+      const weekPattern = /([\d]+)\s*(săptămân|săptămâni|week|weeks|semana|semanas)/i;
+      const monthPattern = /([\d]+)\s*(lun|lună|luni|month|months|mes|meses)/i;
+      const dayPattern = /([\d]+)\s*(day|days|zi|zile|zil|día|días)/i;
+      
+      const weekMatch = duration.match(weekPattern);
+      if (weekMatch) {
+        const weeks = parseInt(weekMatch[1]);
+        numDays = Math.min(weeks * 7, 7); // Cap at 7 days (MVP limit)
+        console.log(`📅 Converted ${weeks} weeks to ${numDays} days (MVP limit: 7 days max)`);
+      } else {
+        const monthMatch = duration.match(monthPattern);
+        if (monthMatch) {
+          const months = parseInt(monthMatch[1]);
+          numDays = 7; // Cap at 7 days (MVP limit)
+          console.log(`📅 Requested ${months} months, capped to ${numDays} days (MVP limit)`);
+        } else {
+          const dayMatch = duration.match(dayPattern);
+          if (dayMatch) {
+            numDays = Math.min(parseInt(dayMatch[1]), 7); // Cap at 7 days (MVP limit)
+            console.log(`📅 Extracted ${numDays} days (MVP limit: 7 days max)`);
+          } else {
+            // Fallback: try to extract any number
+            const numberMatch = duration.match(/(\d+)/);
+            if (numberMatch) {
+              const num = parseInt(numberMatch[1]);
+              // If number is small (< 5), assume it's weeks
+              if (num <= 4) {
+                numDays = Math.min(num * 7, 7); // Cap at 7 days
+                console.log(`📅 Assuming ${num} is weeks, capped to ${numDays} days (MVP limit)`);
+              } else {
+                numDays = Math.min(num, 7); // Cap at 7 days
+                console.log(`📅 Capped to ${numDays} days (MVP limit: 7 days max)`);
+              }
+            }
+          }
+        }
+      }
+      
+      // Smart optimization: adjust detail level based on trip length
+      const isLongTrip = numDays >= 14; // 2+ weeks
+      const isVeryLongTrip = numDays >= 21; // 3+ weeks
+      
+      const detailInstructions = isVeryLongTrip 
+        ? `
+🔹 FOR LONG TRIPS (${numDays} days), use CONCISE format to fit in token limit:
+- Accommodation: Use format "Hotel Name" only (no long descriptions)
+- Dining: Use format "Restaurant Name" only (no long descriptions)
+- Activity descriptions: Keep under 50 characters each
+- 2 activities per day (not 3-4)`
+        : isLongTrip
+        ? `
+🔹 FOR MEDIUM TRIPS (${numDays} days), use BALANCED format:
+- Accommodation: "Hotel Name: Brief description (max 50 chars)"
+- Dining: "Restaurant Name: Brief description (max 50 chars)"
+- Activity descriptions: Keep under 80 characters each
+- 2-3 activities per day`
+        : `
+🔹 FOR SHORT TRIPS (${numDays} days), use DETAILED format:
+- Accommodation: "Hotel Name: Detailed description"
+- Dining: "Restaurant Name: Detailed description"
+- Activity descriptions: Can be detailed
+- 3-4 activities per day`;
       
       const prompt = `You are a JSON API that generates travel itineraries. You MUST respond with ONLY valid, parseable JSON. No explanations, no markdown, no extra text.
+${detailInstructions}
 
 REQUIRED OUTPUT FORMAT - COPY EXACTLY:
 {
@@ -615,14 +699,14 @@ REQUIRED OUTPUT FORMAT - COPY EXACTLY:
       "date": "specific date if known",
       "activities": [
         {
-          "name": "Activity name in ${userLanguage}",
-          "description": "Activity description in ${userLanguage}",
+          "name": "Activity in ${userLanguage}",
+          "description": "Brief description in ${userLanguage}",
           "duration": "2 hours",
-          "time": "Morning/Afternoon/Evening"
+          "time": "Morning"
         }
       ],
-      "accommodation": "Hotel name and description in ${userLanguage}",
-      "dining": "Restaurant name and description in ${userLanguage}"
+      "accommodation": "${isVeryLongTrip ? 'Hotel Name' : 'Hotel Name: Description'}",
+      "dining": "${isVeryLongTrip ? 'Restaurant Name' : 'Restaurant Name: Description'}"
     }
   ],
   "tips": ["Tip 1 in ${userLanguage}", "Tip 2 in ${userLanguage}", "Tip 3 in ${userLanguage}"]
@@ -639,6 +723,7 @@ REQUIRED OUTPUT FORMAT - COPY EXACTLY:
 8. NO comments in JSON
 9. Ensure ALL brackets, braces, and quotes are properly closed
 10. Use double quotes for strings, not single quotes
+11. ${isVeryLongTrip ? 'KEEP DESCRIPTIONS SHORT - token limit!' : 'Provide good detail'}
 
 VALIDATE before responding:
 - Count your days: you must have ${numDays} objects in the itinerary array
@@ -649,21 +734,46 @@ VALIDATE before responding:
 Start your response with { and end with }`;
 
       console.log('📤 Sending itinerary generation request...');
+      console.log('📦 Sending with tripInfo:', tripInfo);
       const response = await axios.post(`${config.API_URL}/api/chat`, {
         message: prompt,
-        conversationHistory: [],
-        userPreferences: userPreferences || { language: 'en', currency: 'USD', temperatureUnit: 'C' }
+        conversationHistory: messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        })),
+        userPreferences: userPreferences || { language: 'en', currency: 'USD', temperatureUnit: 'C' },
+        collectedInfo: tripInfo
       });
       console.log('📥 Got response:', response.data);
 
       if (response.data.success) {
         console.log('✅ Response successful, parsing...');
+        
+        // Check if response was validated by backend
+        if (response.data.validated) {
+          console.log('✅ Response was validated by backend validator');
+        }
+        
+        // Check if data was prepared by Data Preparation Agent
+        if (response.data.dataPrepared && response.data.preparedData) {
+          console.log('🤖 Data was prepared by Data Preparation Agent:');
+          console.log('  - Original duration:', duration);
+          console.log('  - Corrected duration:', response.data.preparedData.duration);
+          console.log('  - Duration in days:', response.data.preparedData.durationInDays);
+        }
+        
+        // Check if fallback itinerary was used
+        if (response.data.fallback) {
+          console.log('🆘 Fallback itinerary was generated (validation failed but system recovered)');
+        }
+        
         try {
           // Try to parse JSON response
           const jsonMatch = response.data.message.match(/\{[\s\S]*\}/);
           console.log('🔍 JSON match found:', !!jsonMatch);
           if (!jsonMatch) {
             console.error('❌ No JSON found in response. AI said:', response.data.message);
+            throw new Error('No valid JSON found in response');
           }
           if (jsonMatch) {
             console.log('📝 Parsing JSON...');
@@ -746,7 +856,27 @@ Start your response with { and end with }`;
           // User can retry the request
         }
       } else {
+        // Handle validation failure from backend
         console.error('❌ Response unsuccessful:', response.data);
+        
+        let errorContent = '❌ Sorry, I encountered an error generating your itinerary.';
+        
+        if (response.data.validationErrors && response.data.validationErrors.length > 0) {
+          console.error('Validation errors:', response.data.validationErrors);
+          errorContent += ' The AI response had formatting issues. Please try again.';
+        } else if (response.data.error) {
+          errorContent += ` ${response.data.error}`;
+        } else {
+          errorContent += ' Please try again.';
+        }
+        
+        const errorMessage = {
+          role: 'assistant',
+          content: errorContent,
+          timestamp: new Date(),
+          isError: true
+        };
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error('❌ Error generating itinerary:', error);
