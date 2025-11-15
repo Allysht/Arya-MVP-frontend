@@ -1717,6 +1717,27 @@
   .price-footer-details {
     flex-wrap: wrap;
   }
+
+  /* Ensure hotel/restaurant images show properly on mobile */
+  .activity-place-compact {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .activity-place-image {
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
+  }
+
+  .activity-place-name {
+    font-size: 0.875rem;
+  }
+
+  .activity-place-meta {
+    font-size: 0.75rem;
+  }
 }
 
 /* Beautiful Placeholder Styles - Gallery (Main Hero) */

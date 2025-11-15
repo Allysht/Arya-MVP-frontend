@@ -271,11 +271,25 @@ const Chat = ({ userPreferences }) => {
       }
     }
     
-    // Extract dates
-    const datePattern = /(\d{1,2})\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)/i;
-    const dateMatch = message.match(datePattern);
-    if (dateMatch && !updated.dates) {
-      updated.dates = dateMatch[0];
+    // Extract dates - handle date ranges across months
+    if (!updated.dates) {
+      // Pattern for "from X to Y" where months are different
+      const rangePattern = /from\s+(\d{1,2})(?:st|nd|rd|th)?\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)/i;
+      const rangeMatch = message.match(rangePattern);
+      if (rangeMatch) {
+        const startDay = rangeMatch[1];
+        const startMonth = rangeMatch[2];
+        const endDay = rangeMatch[3];
+        const endMonth = rangeMatch[4];
+        updated.dates = `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+      } else {
+        // Single date pattern
+        const datePattern = /(\d{1,2})\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)/i;
+        const dateMatch = message.match(datePattern);
+        if (dateMatch) {
+          updated.dates = dateMatch[0];
+        }
+      }
     }
     
     // Extract duration
