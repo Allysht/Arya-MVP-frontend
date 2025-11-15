@@ -598,19 +598,9 @@ const Chat = ({ userPreferences }) => {
       const daysMatch = duration.match(/(\d+)/);
       const numDays = daysMatch ? parseInt(daysMatch[1]) : 5;
       
-      const prompt = `You MUST respond with ONLY valid JSON. No other text before or after.
+      const prompt = `You are a JSON API that generates travel itineraries. You MUST respond with ONLY valid, parseable JSON. No explanations, no markdown, no extra text.
 
-Create a complete ${numDays}-day itinerary for ${destination}.
-From: ${origin}
-Travelers: ${travelers}
-Purpose: ${purpose}
-Dates: ${dates}
-
-CRITICAL: Generate exactly ${numDays} days of itinerary. Do NOT skip any days!
-
-IMPORTANT: The user speaks ${userLanguage}. Generate ALL content (day titles, activity names, descriptions, accommodation names, dining suggestions, and tips) in ${userLanguage}.
-
-OUTPUT ONLY THIS JSON (copy the format exactly):
+REQUIRED OUTPUT FORMAT - COPY EXACTLY:
 {
   "destination": "${destination}",
   "origin": "${origin}",
@@ -622,33 +612,41 @@ OUTPUT ONLY THIS JSON (copy the format exactly):
     {
       "day": 1,
       "title": "Day 1 title in ${userLanguage}",
+      "date": "specific date if known",
       "activities": [
-        {"name": "Activity in ${userLanguage}", "description": "What to do in ${userLanguage}"}
+        {
+          "name": "Activity name in ${userLanguage}",
+          "description": "Activity description in ${userLanguage}",
+          "duration": "2 hours",
+          "time": "Morning/Afternoon/Evening"
+        }
       ],
-      "accommodation": "Hotel suggestion in ${userLanguage}",
-      "dining": "Restaurant suggestion in ${userLanguage}"
-    },
-    {
-      "day": 2,
-      "title": "Day 2 title in ${userLanguage}",
-      "activities": [
-        {"name": "Activity in ${userLanguage}", "description": "What to do in ${userLanguage}"}
-      ],
-      "accommodation": "Hotel suggestion in ${userLanguage}",
-      "dining": "Restaurant suggestion in ${userLanguage}"
+      "accommodation": "Hotel name and description in ${userLanguage}",
+      "dining": "Restaurant name and description in ${userLanguage}"
     }
-    ... continue for ALL ${numDays} days
   ],
   "tips": ["Tip 1 in ${userLanguage}", "Tip 2 in ${userLanguage}", "Tip 3 in ${userLanguage}"]
 }
 
-🚨 ABSOLUTE REQUIREMENTS:
-- Output ONLY valid JSON
-- Generate EXACTLY ${numDays} complete day objects in the itinerary array
-- Each day MUST have: day number, title, activities array, accommodation, dining
-- ALL text content MUST be in ${userLanguage}
-- Day titles like "Arrival Day" should be translated to ${userLanguage}
-- No explanations, no markdown, just pure JSON starting with { and ending with }.`;
+🚨 STRICT RULES:
+1. Generate EXACTLY ${numDays} day objects in the itinerary array
+2. Each day MUST have ALL fields: day, title, date, activities (array), accommodation, dining
+3. Each activity MUST have: name, description, duration, time
+4. ALL text MUST be in ${userLanguage}
+5. The response MUST start with { and end with }
+6. NO text before or after the JSON
+7. NO markdown code blocks (no \`\`\`json)
+8. NO comments in JSON
+9. Ensure ALL brackets, braces, and quotes are properly closed
+10. Use double quotes for strings, not single quotes
+
+VALIDATE before responding:
+- Count your days: you must have ${numDays} objects in the itinerary array
+- Check all brackets are closed: { }, [ ]
+- Check all quotes are closed: " "
+- Verify the JSON is parseable
+
+Start your response with { and end with }`;
 
       console.log('📤 Sending itinerary generation request...');
       const response = await axios.post(`${config.API_URL}/api/chat`, {
@@ -680,16 +678,34 @@ OUTPUT ONLY THIS JSON (copy the format exactly):
             itineraryData.purpose = itineraryData.purpose || purpose;
             itineraryData.dates = itineraryData.dates || dates;
             
+            // Validate itinerary structure
+            if (!itineraryData.itinerary || !Array.isArray(itineraryData.itinerary) || itineraryData.itinerary.length === 0) {
+              throw new Error('Invalid itinerary: missing or empty itinerary array');
+            }
+
             // Normalize itinerary days - ensure each day has a proper day number
-            if (itineraryData.itinerary && Array.isArray(itineraryData.itinerary)) {
-              itineraryData.itinerary = itineraryData.itinerary.map((day, index) => ({
+            itineraryData.itinerary = itineraryData.itinerary.map((day, index) => {
+              // Validate each day has required fields
+              if (!day.activities || !Array.isArray(day.activities)) {
+                console.warn(`⚠️ Day ${index + 1} missing activities array`);
+                day.activities = [];
+              }
+              
+              return {
                 ...day,
                 day: day.day || (index + 1), // Ensure sequential day numbers
-                title: day.title || `Day ${index + 1}` // Ensure title exists
-              }));
-              console.log(`✅ Itinerary normalized: ${itineraryData.itinerary.length} days`);
-            } else {
-              console.warn('⚠️ No itinerary found in AI response');
+                title: day.title || `Day ${index + 1}`, // Ensure title exists
+                activities: day.activities,
+                accommodation: day.accommodation || '',
+                dining: day.dining || ''
+              };
+            });
+            
+            console.log(`✅ Itinerary validated and normalized: ${itineraryData.itinerary.length} days`);
+
+            // Validate we have the expected number of days
+            if (itineraryData.itinerary.length < numDays * 0.8) {
+              console.warn(`⚠️ Generated ${itineraryData.itinerary.length} days but expected ${numDays}`);
             }
             
             // Include hotels and restaurants from travelData if available
@@ -714,31 +730,20 @@ OUTPUT ONLY THIS JSON (copy the format exactly):
             setShowTripPanel(true); // Show Trip Panel when itinerary is created
           }
         } catch (e) {
-          console.error('Failed to parse itinerary JSON:', e);
-          // If JSON parsing fails, create a basic structure with validated fields
-          const tripData = {
-            destination: destination,
-            origin: origin,
-            duration: duration,
-            travelers: travelers,
-            purpose: purpose,
-            dates: dates,
-            itinerary: [],
-            tips: []
+          console.error('❌ Failed to parse itinerary JSON:', e);
+          console.error('❌ Malformed response:', response.data.message);
+          
+          // Show error message to user
+          const errorMessage = {
+            role: 'assistant',
+            content: '❌ Sorry, I encountered an error generating your itinerary. The response format was invalid. Please try again.',
+            timestamp: new Date(),
+            isError: true
           };
-          // Include hotels and restaurants from travelData if available
-          if (response.data.travelData) {
-            if (response.data.travelData.hotels) {
-            tripData.hotels = response.data.travelData.hotels;
-            }
-            if (response.data.travelData.restaurants) {
-              tripData.restaurants = response.data.travelData.restaurants;
-            }
-          }
-          console.log('🎯 Setting currentTrip:', tripData);
-          console.log('🎯 Setting showTripPanel to true');
-          setCurrentTrip(tripData);
-          setShowTripPanel(true); // Auto-show on mobile when trip is created
+          setMessages(prev => [...prev, errorMessage]);
+          
+          // DO NOT show trip panel with empty data
+          // User can retry the request
         }
       } else {
         console.error('❌ Response unsuccessful:', response.data);
