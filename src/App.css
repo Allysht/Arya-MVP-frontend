@@ -92,6 +92,27 @@
   transform: translateY(0);
 }
 
+.header-btn-settings {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-btn-settings:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.header-btn-settings svg {
+  width: 20px;
+  height: 20px;
+}
+
 .app-main {
   flex: 1;
   display: flex;
@@ -120,8 +141,24 @@
     font-size: 0.8125rem;
   }
 
+  .header-btn-settings {
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Hide settings text on mobile, keep icon */
+  .header-btn-settings svg {
+    margin: 0;
+  }
+
   .app-subtitle {
     font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-btn-settings {
+    padding: 0.5rem;
+    min-width: 40px;
   }
 }
 

@@ -5,6 +5,7 @@ import Message from './Message';
 import TravelCard from './TravelCard';
 import TripPanel from './TripPanel';
 import config from '../config';
+import { useTranslations } from '../translations';
 
 /**
  * Enrich itinerary with real hotel and restaurant data
@@ -59,11 +60,61 @@ const enrichItineraryWithRealData = (itinerary, travelData) => {
   return enriched;
 };
 
-const Chat = () => {
+const getGreeting = (langCode) => {
+  const greetings = {
+    en: 'Hi! I\'m Arya, your travel agent. Where would you like to go? ✈️',
+    ro: 'Bună! Sunt Arya, agentul tău de turism. Unde ai dori să călătorești? ✈️',
+    es: '¡Hola! Soy Arya, tu agente de viajes. ¿A dónde te gustaría ir? ✈️',
+    fr: 'Salut ! Je suis Arya, votre agent de voyage. Où aimeriez-vous aller ? ✈️',
+    de: 'Hallo! Ich bin Arya, dein Reiseberater. Wohin möchtest du reisen? ✈️',
+    it: 'Ciao! Sono Arya, il tuo agente di viaggio. Dove vorresti andare? ✈️',
+    pt: 'Olá! Sou Arya, seu agente de viagens. Para onde gostaria de ir? ✈️',
+    ja: 'こんにちは！私はアリヤ、あなたの旅行エージェントです。どこに行きたいですか？✈️',
+    zh: '你好！我是Arya，你的旅行顾问。你想去哪里？✈️',
+    ar: 'مرحبا! أنا آريا، وكيل السفر الخاص بك. أين تريد أن تذهب؟ ✈️'
+  };
+  return greetings[langCode] || greetings.en;
+};
+
+const getConfirmationMessage = (langCode, duration, destination) => {
+  const messages = {
+    en: `Perfect! I've got all the details. Let me create your ${duration} trip to ${destination}! 🎉`,
+    ro: `Perfect! Am toate detaliile. Îți creez călătoria de ${duration} spre ${destination}! 🎉`,
+    es: `¡Perfecto! Tengo todos los detalles. ¡Déjame crear tu viaje de ${duration} a ${destination}! 🎉`,
+    fr: `Parfait ! J'ai tous les détails. Laissez-moi créer votre voyage de ${duration} à ${destination} ! 🎉`,
+    de: `Perfekt! Ich habe alle Details. Lass mich deine ${duration} Reise nach ${destination} erstellen! 🎉`,
+    it: `Perfetto! Ho tutti i dettagli. Lasciami creare il tuo viaggio di ${duration} a ${destination}! 🎉`,
+    pt: `Perfeito! Tenho todos os detalhes. Deixe-me criar sua viagem de ${duration} para ${destination}! 🎉`,
+    ja: `完璧です！すべての詳細が揃いました。${destination}への${duration}の旅行を作成します！🎉`,
+    zh: `完美！我已经掌握了所有细节。让我为您创建${duration}的${destination}之旅！🎉`,
+    ar: `مثالي! لديّ كل التفاصيل. دعني أُنشئ رحلتك لمدة ${duration} إلى ${destination}! 🎉`
+  };
+  return messages[langCode] || messages.en;
+};
+
+const getItineraryReadyMessage = (langCode) => {
+  const messages = {
+    en: '✨ Your personalized itinerary is ready!',
+    ro: '✨ Itinerariul tău personalizat este gata!',
+    es: '✨ ¡Tu itinerario personalizado está listo!',
+    fr: '✨ Votre itinéraire personnalisé est prêt !',
+    de: '✨ Deine personalisierte Reiseroute ist fertig!',
+    it: '✨ Il tuo itinerario personalizzato è pronto!',
+    pt: '✨ Seu itinerário personalizado está pronto!',
+    ja: '✨ あなたのパーソナライズされた旅程が完成しました！',
+    zh: '✨ 您的个性化行程已准备好！',
+    ar: '✨ خط سير رحلتك الشخصي جاهز!'
+  };
+  return messages[langCode] || messages.en;
+};
+
+const Chat = ({ userPreferences }) => {
+  const t = useTranslations(userPreferences?.language || 'en');
+  
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Hey there, Arya here! Excited to help you with anything travel related.',
+      content: getGreeting(userPreferences?.language || 'en'),
       timestamp: new Date()
     }
   ]);
@@ -73,10 +124,35 @@ const Chat = () => {
   const [currentTrip, setCurrentTrip] = useState(null);
   const [isGeneratingTrip, setIsGeneratingTrip] = useState(false);
   const [showTripPanel, setShowTripPanel] = useState(false);
-  const [showWelcomePopup, setShowWelcomePopup] = useState(true);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false); // Changed to false, preferences popup shows first
+  const [collectedInfo, setCollectedInfo] = useState({
+    destination: null,
+    origin: null,
+    travelers: null,
+    dates: null,
+    duration: null,
+    purpose: null
+  });
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const lastMessageTimestamp = useRef(null);
+
+  // Update greeting when language preference changes
+  useEffect(() => {
+    if (userPreferences?.language) {
+      setMessages([{
+        role: 'assistant',
+        content: getGreeting(userPreferences.language),
+        timestamp: new Date()
+      }]);
+    }
+  }, [userPreferences?.language]);
+
+  // Debug: Log when currentTrip or showTripPanel changes
+  useEffect(() => {
+    console.log('🔍 currentTrip state:', currentTrip);
+    console.log('🔍 showTripPanel state:', showTripPanel);
+  }, [currentTrip, showTripPanel]);
 
   const scrollToLastMessage = useCallback(() => {
     setTimeout(() => {
@@ -145,10 +221,95 @@ const Chat = () => {
     'Japan vacation'
   ];
 
+  // Extract travel info from user message and update collectedInfo
+  const extractInfoFromMessage = (message) => {
+    const lower = message.toLowerCase();
+    const updated = { ...collectedInfo };
+    
+    // Extract destination - look for common patterns
+    if (!updated.destination) {
+      // Pattern 1: "to [place]" or "in [place]" or "în [place]"
+      const destPattern = /(?:to|in|în)\s+([A-Z][a-zăâîșț]+(?:\s+[A-Z][a-zăâîșț]+)*)/i;
+      const destMatch = message.match(destPattern);
+      if (destMatch) {
+        updated.destination = destMatch[1].trim();
+      }
+      
+      // Pattern 2: Common city names (as fallback)
+      const cities = [
+        'stockholm', 'paris', 'london', 'tokyo', 'new york', 'rome', 'barcelona', 
+        'amsterdam', 'berlin', 'vienna', 'prague', 'budapest', 'göteborg', 
+        'gothenburg', 'copenhagen', 'copenhaga', 'madrid', 'lisbon', 'athens',
+        'dublin', 'edinburgh', 'brussels', 'zürich', 'oslo', 'helsinki', 'abuja',
+        'nigeria', 'lagos', 'cairo', 'nairobi', 'johannesburg', 'cape town',
+        'marrakech', 'casablanca', 'tunis', 'algiers', 'accra', 'dakar'
+      ];
+      const foundCity = cities.find(city => lower.includes(city));
+      if (foundCity && !updated.destination) {
+        updated.destination = foundCity.charAt(0).toUpperCase() + foundCity.slice(1);
+        if (foundCity === 'copenhaga') updated.destination = 'Copenhagen';
+        if (foundCity === 'göteborg') updated.destination = 'Gothenburg';
+      }
+    }
+    
+    // Extract origin (look for "from [city]" or "din [city]")
+    const originMatch = lower.match(/(?:from|din)\s+([a-z\s]+?)(?:\s|$|,)/i);
+    if (originMatch && !updated.origin) {
+      updated.origin = originMatch[1].trim();
+    }
+    
+    // Extract travelers
+    if (!updated.travelers) {
+      if (lower.includes('partner') || lower.includes('partenera') || lower.includes('partenerul') ||
+          lower.includes('wife') || lower.includes('husband') || lower.includes('soția') || 
+          lower.includes('soțul') || lower.includes('girlfriend') || lower.includes('boyfriend')) {
+        updated.travelers = '2 people (couple)';
+      } else if (lower.includes('solo') || lower.includes('singur') || lower.includes('alone')) {
+        updated.travelers = '1 person (solo)';
+      } else if (lower.includes('family') || lower.includes('familia')) {
+        updated.travelers = 'family';
+      }
+    }
+    
+    // Extract dates
+    const datePattern = /(\d{1,2})\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie|january|february|march|april|may|june|july|august|september|october|november|december)/i;
+    const dateMatch = message.match(datePattern);
+    if (dateMatch && !updated.dates) {
+      updated.dates = dateMatch[0];
+    }
+    
+    // Extract duration
+    const durationPattern = /(\d+)\s*(day|days|zile|zi)/i;
+    const durationMatch = message.match(durationPattern);
+    if (durationMatch && !updated.duration) {
+      updated.duration = `${durationMatch[1]} days`;
+    }
+    
+    // Extract purpose
+    if (!updated.purpose) {
+      if (lower.includes('cultur') || lower.includes('museum')) {
+        updated.purpose = 'culture';
+      } else if (lower.includes('food') || lower.includes('gastronomie') || lower.includes('restaurant')) {
+        updated.purpose = 'gastronomy';
+      } else if (lower.includes('explor')) {
+        updated.purpose = 'exploring';
+      } else if (lower.includes('aventur')) {
+        updated.purpose = 'adventure';
+      }
+    }
+    
+    return updated;
+  };
+
   const handleSendMessage = async (messageText = null) => {
     const textToSend = messageText || inputMessage.trim();
     
     if (!textToSend || isLoading) return;
+
+    // Extract info from this message
+    const updatedInfo = extractInfoFromMessage(textToSend);
+    setCollectedInfo(updatedInfo);
+    console.log('📋 Collected info so far:', updatedInfo);
 
     const userMessage = {
       role: 'user',
@@ -168,32 +329,108 @@ const Chat = () => {
     setIsLoading(true);
 
     try {
+      console.log('📤 Sending message with preferences:', userPreferences);
+      console.log('📤 Sending with collected info:', updatedInfo);
       const response = await axios.post(`${config.API_URL}/api/chat`, {
         message: textToSend,
         conversationHistory: messages.map(msg => ({
           role: msg.role,
           content: msg.content
-        }))
+        })),
+        userPreferences: userPreferences || { language: 'en', currency: 'USD', temperatureUnit: 'C' },
+        collectedInfo: updatedInfo
       });
 
       if (response.data.success) {
         const responseContent = response.data.message;
         
+        // Extract destination from AI response if it mentions a city
+        if (!collectedInfo.destination && !responseContent.includes('TRIP_READY')) {
+          const cityMentionPattern = /(?:în|in|to|deci, în)\s+([A-Z][a-zăâîșț]+(?:\s*,?\s*[A-Z][a-zăâîșț]+)*)/;
+          const cityMatch = responseContent.match(cityMentionPattern);
+          if (cityMatch) {
+            const extractedDest = cityMatch[1].trim();
+            // Update collectedInfo with extracted destination
+            setCollectedInfo(prev => ({ ...prev, destination: extractedDest }));
+            console.log('✅ Extracted destination from AI response:', extractedDest);
+          }
+        }
+        
         // Check if response contains TRIP_READY
-        if (responseContent.includes('TRIP_READY:')) {
+        console.log('🔍 Checking response for TRIP_READY...');
+        console.log('Response content:', responseContent);
+        
+        if (responseContent.includes('TRIP_READY:') || responseContent.includes('TRIP_READY')) {
+          console.log('✅ TRIP_READY detected!');
           // Parse trip data
-          const tripInfo = parseTripReady(responseContent);
+          let tripInfo = parseTripReady(responseContent);
           console.log('📋 Parsed trip info:', tripInfo);
           
+          // Smart fallback: If parsing failed, extract from conversation history
+          if (!tripInfo.destination || !tripInfo.duration || !tripInfo.travelers) {
+            console.log('⚠️ Incomplete trip data, extracting from conversation...');
+            const conversationText = messages.map(m => m.content).join(' ').toLowerCase();
+            
+            // Use collectedInfo first, then fallback to conversation extraction
+            if (!tripInfo.destination && collectedInfo.destination) {
+              tripInfo.destination = collectedInfo.destination;
+            }
+            if (!tripInfo.origin && collectedInfo.origin) {
+              tripInfo.origin = collectedInfo.origin;
+            }
+            if (!tripInfo.travelers && collectedInfo.travelers) {
+              tripInfo.travelers = collectedInfo.travelers;
+            }
+            if (!tripInfo.dates && collectedInfo.dates) {
+              tripInfo.dates = collectedInfo.dates;
+            }
+            if (!tripInfo.duration && collectedInfo.duration) {
+              tripInfo.duration = collectedInfo.duration;
+            }
+            if (!tripInfo.purpose && collectedInfo.purpose) {
+              tripInfo.purpose = collectedInfo.purpose;
+            }
+            
+            // Extract destination (common city names) as final fallback
+            const cities = ['stockholm', 'paris', 'london', 'tokyo', 'new york', 'rome', 'barcelona', 'amsterdam', 'berlin', 'vienna', 'prague', 'budapest', 'göteborg', 'gothenburg', 'copenhagen', 'copenhaga'];
+            const foundCity = cities.find(city => conversationText.includes(city));
+            if (foundCity && !tripInfo.destination) {
+              tripInfo.destination = foundCity.charAt(0).toUpperCase() + foundCity.slice(1);
+              if (foundCity === 'copenhaga') tripInfo.destination = 'Copenhagen';
+              if (foundCity === 'stockholm') tripInfo.destination = 'Stockholm';
+            }
+            
+            // Extract duration (look for numbers followed by day/days/zile/zi)
+            const durationMatch = conversationText.match(/(\d+)\s*(day|days|zile|zi|zil)/i);
+            if (durationMatch && !tripInfo.duration) {
+              tripInfo.duration = `${durationMatch[1]} days`;
+            }
+            
+            // Extract travelers if not found
+            if (!tripInfo.travelers) {
+              if (conversationText.includes('partner') || conversationText.includes('partenera') || 
+                  conversationText.includes('partenerul') || conversationText.includes('wife') || 
+                  conversationText.includes('husband') || conversationText.includes('girlfriend') || 
+                  conversationText.includes('boyfriend')) {
+                tripInfo.travelers = '2 people (couple)';
+              } else if (conversationText.includes('solo') || conversationText.includes('singur') || conversationText.includes('alone')) {
+                tripInfo.travelers = '1 person (solo)';
+              }
+            }
+            
+            console.log('📋 Enhanced trip info:', tripInfo);
+          }
+          
           // Validate required fields
-          const destination = tripInfo.destination || tripInfo.location || 'your destination';
-          const duration = tripInfo.duration || tripInfo.days || 'amazing';
+          const destination = tripInfo.destination || 'your destination';
+          const duration = tripInfo.duration || 'amazing';
           
           // Only show confirmation if we have valid data
           if (destination !== 'your destination' && duration !== 'amazing') {
+            const langCode = userPreferences?.language || 'en';
             const confirmMessage = {
               role: 'assistant',
-              content: `Perfect! I've got all the details. Let me create your ${duration} trip to ${destination}! 🎉`,
+              content: getConfirmationMessage(langCode, duration, destination),
               timestamp: new Date()
             };
             setMessages(prev => [...prev, confirmMessage]);
@@ -202,12 +439,15 @@ const Chat = () => {
           }
           
           // Generate full itinerary
+          console.log('🚀 Calling generateFullItinerary with:', tripInfo);
           await generateFullItinerary(tripInfo);
+          console.log('✅ generateFullItinerary completed');
           
           // Add a permanent button in chat to view itinerary
+          const langCode = userPreferences?.language || 'en';
           const itineraryButtonMessage = {
             role: 'assistant',
-            content: '✨ Your personalized itinerary is ready!',
+            content: getItineraryReadyMessage(langCode),
             hasItineraryButton: true,
             timestamp: new Date()
           };
@@ -249,25 +489,68 @@ const Chat = () => {
   };
 
   const parseTripReady = (content) => {
+    console.log('🔍 Parsing TRIP_READY from content:', content);
     const lines = content.split('\n');
     const tripData = {};
     
     lines.forEach(line => {
-      if (line.includes(':')) {
+      if (line.includes(':') && !line.includes('TRIP_READY')) {
         const [key, ...valueParts] = line.split(':');
         const value = valueParts.join(':').trim(); // Handle cases where value contains ':'
         const cleanKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, ''); // Remove special chars
         
-        if (cleanKey && value && !value.includes('TRIP_READY')) {
+        if (cleanKey && value) {
           tripData[cleanKey] = value;
+          console.log(`✅ Parsed field: ${cleanKey} = ${value}`);
         }
       }
     });
     
+    console.log('📋 Final parsed tripData:', tripData);
     return tripData;
   };
 
+  const calculateDateRange = (dates, duration) => {
+    // If dates already contain a range (e.g., "December 12-24"), return as is
+    if (dates && (dates.includes('-') || dates.includes('to') || dates.includes('till'))) {
+      return dates;
+    }
+    
+    // If we have a start date and duration, calculate end date
+    if (dates && duration) {
+      try {
+        // Extract number of days from duration
+        const daysMatch = duration.match(/(\d+)/);
+        if (!daysMatch) return dates;
+        
+        const numDays = parseInt(daysMatch[1]);
+        
+        // Try to parse the start date
+        const datePatterns = [
+          /(\d{1,2})\s*(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie)/i,
+          /(\d{1,2})\s*(january|february|march|april|may|june|july|august|september|october|november|december)/i,
+          /(ianuarie|februarie|martie|aprilie|mai|iunie|iulie|august|septembrie|octombrie|noiembrie|decembrie)\s*(\d{1,2})/i,
+          /(january|february|march|april|may|june|july|august|september|october|november|december)\s*(\d{1,2})/i
+        ];
+        
+        for (const pattern of datePatterns) {
+          const match = dates.match(pattern);
+          if (match) {
+            const day = parseInt(match[1]) || parseInt(match[2]);
+            const endDay = day + numDays;
+            return `${dates} - ${endDay}`;
+          }
+        }
+      } catch (e) {
+        console.log('Could not calculate date range:', e);
+      }
+    }
+    
+    return dates;
+  };
+
   const generateFullItinerary = async (tripInfo) => {
+    console.log('🔧 generateFullItinerary called with:', tripInfo);
     setIsGeneratingTrip(true);
     
     try {
@@ -277,16 +560,43 @@ const Chat = () => {
       const duration = tripInfo.duration || '5 days';
       const travelers = tripInfo.travelers || '1 person';
       const purpose = tripInfo.purpose || 'leisure';
-      const dates = tripInfo.dates || 'flexible dates';
+      let dates = tripInfo.dates || 'flexible dates';
       
-      const prompt = `Create a detailed ${duration} itinerary for ${destination}.
-Traveling from: ${origin}
+      // Calculate date range if needed
+      dates = calculateDateRange(dates, duration);
+      
+      // Get language names for instructions
+      const languageNames = {
+        'en': 'English',
+        'ro': 'Romanian',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'pt': 'Portuguese',
+        'ja': 'Japanese',
+        'zh': 'Chinese',
+        'ar': 'Arabic'
+      };
+      const userLanguage = languageNames[userPreferences?.language] || 'English';
+      
+      // Extract number of days from duration
+      const daysMatch = duration.match(/(\d+)/);
+      const numDays = daysMatch ? parseInt(daysMatch[1]) : 5;
+      
+      const prompt = `You MUST respond with ONLY valid JSON. No other text before or after.
+
+Create a complete ${numDays}-day itinerary for ${destination}.
+From: ${origin}
 Travelers: ${travelers}
-Focus: ${purpose}
+Purpose: ${purpose}
 Dates: ${dates}
 
-Provide a day-by-day breakdown with specific activities, restaurants, and accommodations.
-Format it as JSON with this structure:
+CRITICAL: Generate exactly ${numDays} days of itinerary. Do NOT skip any days!
+
+IMPORTANT: The user speaks ${userLanguage}. Generate ALL content (day titles, activity names, descriptions, accommodation names, dining suggestions, and tips) in ${userLanguage}.
+
+OUTPUT ONLY THIS JSON (copy the format exactly):
 {
   "destination": "${destination}",
   "origin": "${origin}",
@@ -297,28 +607,56 @@ Format it as JSON with this structure:
   "itinerary": [
     {
       "day": 1,
-      "title": "Arrival & First Impressions",
+      "title": "Day 1 title in ${userLanguage}",
       "activities": [
-        {"name": "Activity Name", "description": "Description"}
+        {"name": "Activity in ${userLanguage}", "description": "What to do in ${userLanguage}"}
       ],
-      "accommodation": "Hotel name and details",
-      "dining": "Restaurant recommendations"
+      "accommodation": "Hotel suggestion in ${userLanguage}",
+      "dining": "Restaurant suggestion in ${userLanguage}"
+    },
+    {
+      "day": 2,
+      "title": "Day 2 title in ${userLanguage}",
+      "activities": [
+        {"name": "Activity in ${userLanguage}", "description": "What to do in ${userLanguage}"}
+      ],
+      "accommodation": "Hotel suggestion in ${userLanguage}",
+      "dining": "Restaurant suggestion in ${userLanguage}"
     }
+    ... continue for ALL ${numDays} days
   ],
-  "tips": ["tip 1", "tip 2"]
-}`;
+  "tips": ["Tip 1 in ${userLanguage}", "Tip 2 in ${userLanguage}", "Tip 3 in ${userLanguage}"]
+}
 
+🚨 ABSOLUTE REQUIREMENTS:
+- Output ONLY valid JSON
+- Generate EXACTLY ${numDays} complete day objects in the itinerary array
+- Each day MUST have: day number, title, activities array, accommodation, dining
+- ALL text content MUST be in ${userLanguage}
+- Day titles like "Arrival Day" should be translated to ${userLanguage}
+- No explanations, no markdown, just pure JSON starting with { and ending with }.`;
+
+      console.log('📤 Sending itinerary generation request...');
       const response = await axios.post(`${config.API_URL}/api/chat`, {
         message: prompt,
-        conversationHistory: []
+        conversationHistory: [],
+        userPreferences: userPreferences || { language: 'en', currency: 'USD', temperatureUnit: 'C' }
       });
+      console.log('📥 Got response:', response.data);
 
       if (response.data.success) {
+        console.log('✅ Response successful, parsing...');
         try {
           // Try to parse JSON response
           const jsonMatch = response.data.message.match(/\{[\s\S]*\}/);
+          console.log('🔍 JSON match found:', !!jsonMatch);
+          if (!jsonMatch) {
+            console.error('❌ No JSON found in response. AI said:', response.data.message);
+          }
           if (jsonMatch) {
+            console.log('📝 Parsing JSON...');
             const itineraryData = JSON.parse(jsonMatch[0]);
+            console.log('✅ Parsed itinerary data:', itineraryData);
             
             // Ensure all required fields exist in the parsed data
             itineraryData.destination = itineraryData.destination || destination;
@@ -343,8 +681,8 @@ Format it as JSON with this structure:
             // Include hotels and restaurants from travelData if available
             if (response.data.travelData) {
               if (response.data.travelData.hotels) {
-                itineraryData.hotels = response.data.travelData.hotels;
-              }
+              itineraryData.hotels = response.data.travelData.hotels;
+            }
               if (response.data.travelData.restaurants) {
                 itineraryData.restaurants = response.data.travelData.restaurants;
               }
@@ -356,7 +694,10 @@ Format it as JSON with this structure:
               );
             }
             
+            console.log('🎯 Setting currentTrip:', itineraryData);
+            console.log('🎯 Setting showTripPanel to true');
             setCurrentTrip(itineraryData);
+            setShowTripPanel(true); // Show Trip Panel when itinerary is created
           }
         } catch (e) {
           console.error('Failed to parse itinerary JSON:', e);
@@ -374,19 +715,25 @@ Format it as JSON with this structure:
           // Include hotels and restaurants from travelData if available
           if (response.data.travelData) {
             if (response.data.travelData.hotels) {
-              tripData.hotels = response.data.travelData.hotels;
+            tripData.hotels = response.data.travelData.hotels;
             }
             if (response.data.travelData.restaurants) {
               tripData.restaurants = response.data.travelData.restaurants;
             }
           }
+          console.log('🎯 Setting currentTrip:', tripData);
+          console.log('🎯 Setting showTripPanel to true');
           setCurrentTrip(tripData);
           setShowTripPanel(true); // Auto-show on mobile when trip is created
         }
+      } else {
+        console.error('❌ Response unsuccessful:', response.data);
       }
     } catch (error) {
-      console.error('Error generating itinerary:', error);
+      console.error('❌ Error generating itinerary:', error);
+      console.error('Error details:', error.message, error.stack);
     } finally {
+      console.log('🏁 generateFullItinerary finished');
       setIsGeneratingTrip(false);
     }
   };
@@ -418,19 +765,22 @@ Format it as JSON with this structure:
                 <h3>💡 How to Use ARYA</h3>
                 <ul className="help-list">
                   <li>
-                    <strong>Provide Details:</strong> Share your destination, dates, number of travelers, and purpose
+                    <strong>Natural Conversation:</strong> Chat with Arya like you would with a real travel agent - she'll ask questions to understand your needs
                   </li>
                   <li>
-                    <strong>Get a Full Itinerary:</strong> Explicitly ask "create a trip" or "create an itinerary" after sharing your details
+                    <strong>Multiple Languages:</strong> Speak in any language you're comfortable with - Arya will respond in your language
                   </li>
                   <li>
-                    <strong>Be Specific:</strong> The more information you provide, the better your personalized itinerary will be
+                    <strong>Share Your Preferences:</strong> Tell Arya about your travel style, interests, and any special requirements
+                  </li>
+                  <li>
+                    <strong>Get Your Itinerary:</strong> Once Arya has all the details, she'll ask if you're ready to create your personalized trip
                   </li>
                 </ul>
               </div>
               
               <div className="popup-example">
-                <strong>Example:</strong> "I want to visit Paris from December 1st to 5th with my family. Create a trip for me."
+                <strong>Example:</strong> "I'm thinking about visiting Japan in spring with my family. We love food and culture!"
               </div>
             </div>
             
@@ -444,7 +794,7 @@ Format it as JSON with this structure:
       {/* Left Sidebar */}
       <div className="chat-sidebar">
         <button className="new-chat-btn">
-          <span>New Chat</span>
+          <span>{t.newChat}</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="9" y1="9" x2="15" y2="9"></line>
@@ -460,23 +810,23 @@ Format it as JSON with this structure:
         <div className="messages-area">
           {messages.map((message, index) => (
             <Message 
-              key={index} 
+                    key={index} 
               message={message} 
               onViewItinerary={() => setShowTripPanel(true)}
             />
-          ))}
-          
-          {isLoading && (
-            <div className="message assistant-message">
-              <div className="message-avatar">🤖</div>
-              <div className="message-content">
-                <div className="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+              ))}
+              
+              {isLoading && (
+                <div className="message assistant-message">
+                  <div className="message-avatar">🤖</div>
+                  <div className="message-content">
+                    <div className="typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
           )}
           
           <div ref={messagesEndRef} />
@@ -489,7 +839,7 @@ Format it as JSON with this structure:
             <textarea
               ref={textareaRef}
               className="message-input"
-              placeholder="Ask me anything about travel..."
+              placeholder={t.messagePlaceholder}
               value={inputMessage}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
@@ -510,8 +860,8 @@ Format it as JSON with this structure:
 
           {/* Footer */}
           <div className="input-footer">
-            <span>We'd love any suggestions. Click to give </span>
-            <a href="#feedback">feedback</a>
+            <span>{t.feedbackText} </span>
+            <a href="#feedback">{t.feedback}</a>
           </div>
         </div>
       </div>
@@ -522,24 +872,29 @@ Format it as JSON with this structure:
           <div className="trip-panel loading">
             <div className="loading-state">
               <div className="spinner"></div>
-              <p>Creating your perfect itinerary...</p>
+              <p>{t.loading}</p>
             </div>
           </div>
         ) : currentTrip ? (
-          <TripPanel 
-            tripData={currentTrip} 
-            onClose={() => {
-              // Don't clear currentTrip - keep it so user can reopen
-              setShowTripPanel(false);
-            }}
-            showTripPanel={showTripPanel}
-            setShowTripPanel={setShowTripPanel}
-          />
+          <>
+            {console.log('🎨 Rendering TripPanel with tripData:', currentTrip)}
+            {console.log('🎨 showTripPanel:', showTripPanel)}
+            <TripPanel 
+              tripData={currentTrip} 
+              onClose={() => {
+                // Don't clear currentTrip - keep it so user can reopen
+                setShowTripPanel(false);
+              }}
+              showTripPanel={showTripPanel}
+              setShowTripPanel={setShowTripPanel}
+              userPreferences={userPreferences}
+            />
+          </>
         ) : (
           <div className="inspirational-panel">
             <div className="inspirational-header">
-              <h2 className="inspirational-title">✨ Start Your Journey</h2>
-              <p className="inspirational-subtitle">Let me help you plan your perfect trip</p>
+              <h2 className="inspirational-title">✨ {t.startJourney}</h2>
+              <p className="inspirational-subtitle">{t.startJourneySubtitle}</p>
             </div>
             
             <div className="destination-cards">
@@ -576,18 +931,18 @@ Format it as JSON with this structure:
             <div className="quick-actions">
               <div className="action-card">
                 <div className="action-icon">🗺️</div>
-                <h4>Plan Itinerary</h4>
-                <p>Get day-by-day plans</p>
+                <h4>{t.planItinerary}</h4>
+                <p>{t.planItineraryDesc}</p>
               </div>
               <div className="action-card">
                 <div className="action-icon">✈️</div>
-                <h4>Find Flights</h4>
-                <p>Best deals & routes</p>
+                <h4>{t.findFlights}</h4>
+                <p>{t.findFlightsDesc}</p>
               </div>
               <div className="action-card">
                 <div className="action-icon">🏨</div>
-                <h4>Book Hotels</h4>
-                <p>Perfect accommodations</p>
+                <h4>{t.bookHotels}</h4>
+                <p>{t.bookHotelsDesc}</p>
               </div>
             </div>
           </div>

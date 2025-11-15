@@ -3,8 +3,10 @@ import axios from 'axios';
 import './TripPanel.css';
 import pdfGenerator from '../utils/pdfGenerator';
 import config from '../config';
+import { useTranslations } from '../translations';
 
-const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
+const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPreferences }) => {
+  const t = useTranslations(userPreferences?.language || 'en');
   const [expandedDays, setExpandedDays] = useState({});
   const [activeTab, setActiveTab] = useState('overview');
   const [destinationImages, setDestinationImages] = useState([]);
@@ -16,6 +18,52 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
   const [restaurants, setRestaurants] = useState([]);
   const [weatherData, setWeatherData] = useState(null);
   const [priceEstimate, setPriceEstimate] = useState(null);
+
+  // Currency conversion helper
+  const convertCurrency = (amount, fromCurrency = 'EUR') => {
+    const rates = {
+      'EUR': { 'USD': 1.1, 'GBP': 0.86, 'JPY': 161.5, 'CAD': 1.49, 'AUD': 1.67, 'CHF': 0.97, 'CNY': 7.84, 'INR': 91.5, 'BRL': 5.43 },
+      'USD': { 'EUR': 0.91, 'GBP': 0.78, 'JPY': 146.8, 'CAD': 1.35, 'AUD': 1.52, 'CHF': 0.88, 'CNY': 7.13, 'INR': 83.2, 'BRL': 4.94 },
+      'GBP': { 'EUR': 1.16, 'USD': 1.28, 'JPY': 188.0, 'CAD': 1.73, 'AUD': 1.95, 'CHF': 1.13, 'CNY': 9.13, 'INR': 106.5, 'BRL': 6.32 },
+      'JPY': { 'EUR': 0.0062, 'USD': 0.0068, 'GBP': 0.0053, 'CAD': 0.0092, 'AUD': 0.0104, 'CHF': 0.006, 'CNY': 0.0485, 'INR': 0.567, 'BRL': 0.0336 }
+    };
+    
+    const userCurrency = userPreferences?.currency || 'EUR';
+    if (fromCurrency === userCurrency) return amount;
+    
+    const rate = rates[fromCurrency]?.[userCurrency] || 1;
+    return Math.round(amount * rate);
+  };
+  
+  // Get currency symbol
+  const getCurrencySymbol = () => {
+    const symbols = {
+      'EUR': '€',
+      'USD': '$',
+      'GBP': '£',
+      'JPY': '¥',
+      'CAD': 'C$',
+      'AUD': 'A$',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'INR': '₹',
+      'BRL': 'R$'
+    };
+    return symbols[userPreferences?.currency || 'EUR'] || '€';
+  };
+  
+  // Temperature conversion helper
+  const convertTemperature = (celsius) => {
+    if (userPreferences?.temperature === 'fahrenheit') {
+      return Math.round((celsius * 9/5) + 32);
+    }
+    return Math.round(celsius);
+  };
+  
+  // Get temperature unit
+  const getTemperatureUnit = () => {
+    return userPreferences?.temperature === 'fahrenheit' ? '°F' : '°C';
+  };
 
   // Debug log itinerary data
   useEffect(() => {
@@ -56,12 +104,78 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
       if (tripData && tripData.origin && tripData.destination) {
         try {
           console.log('Generating flight route...');
+          
+          // Extract departure date from tripData
+          let departureDate = null;
+          
+          // Try to get date from itinerary first day
+          if (tripData.itinerary && tripData.itinerary.length > 0 && tripData.itinerary[0].date) {
+            departureDate = tripData.itinerary[0].date;
+          } else if (tripData.dates) {
+            // Parse date from dates string (e.g., "5 December - 15 December" or "5 Decembrie - 15")
+            const dateStr = tripData.dates;
+            
+            // Try various date parsing strategies
+            // Strategy 1: Look for ISO format date (YYYY-MM-DD)
+            const isoMatch = dateStr.match(/(\d{4}-\d{2}-\d{2})/);
+            if (isoMatch) {
+              departureDate = isoMatch[1];
+            } else {
+              // Strategy 2: Parse natural language dates
+              // Extract first date-like pattern (day + month name)
+              const monthNames = {
+                'january': 0, 'ianuarie': 0,
+                'february': 1, 'februarie': 1,
+                'march': 2, 'martie': 2,
+                'april': 3, 'aprilie': 3,
+                'may': 4, 'mai': 4,
+                'june': 5, 'iunie': 5,
+                'july': 6, 'iulie': 6,
+                'august': 7, 'august': 7,
+                'september': 8, 'septembrie': 8,
+                'october': 9, 'octombrie': 9,
+                'november': 10, 'noiembrie': 10,
+                'december': 11, 'decembrie': 11
+              };
+              
+              // Match patterns like "5 December" or "5 Decembrie"
+              const dateMatch = dateStr.match(/(\d{1,2})\s+([a-zA-Z]+)/i);
+              if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const monthStr = dateMatch[2].toLowerCase();
+                const month = monthNames[monthStr];
+                
+                if (month !== undefined) {
+                  const year = new Date().getFullYear();
+                  const date = new Date(year, month, day);
+                  
+                  // If the date is in the past, assume next year
+                  if (date < new Date()) {
+                    date.setFullYear(year + 1);
+                  }
+                  
+                  departureDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+                }
+              }
+            }
+          }
+          
+          // If still no date, use 7 days from now as default
+          if (!departureDate) {
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 7);
+            departureDate = futureDate.toISOString().split('T')[0];
+          }
+          
+          console.log('📅 Using departure date:', departureDate);
+          
           const response = await axios.post(`${config.API_URL}/api/flights/search-url`, {
             origin: tripData.origin,
             destination: tripData.destination,
-            departureDate: tripData.dates,
+            departureDate: departureDate,
             adults: parseInt(tripData.travelers) || 1,
-            cabinClass: 'economy'
+            cabinClass: 'economy',
+            language: userPreferences?.language || 'en'
           });
 
           if (response.data.success) {
@@ -79,7 +193,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
     };
 
     generateFlightUrl();
-  }, [tripData?.origin, tripData?.destination, tripData?.dates, tripData?.travelers]);
+  }, [tripData?.origin, tripData?.destination, tripData?.dates, tripData?.travelers, tripData?.itinerary, userPreferences?.language]);
 
   // Fetch hotels and restaurants from tripData or API
   useEffect(() => {
@@ -298,17 +412,27 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
       const totalMax = breakdownMax.accommodation + breakdownMax.dining + breakdownMax.activities + breakdownMax.transportation;
 
       setPriceEstimate({
-        min: Math.round(totalMin),
-        max: Math.round(totalMax),
-        breakdownMin,
-        breakdownMax,
-        currency: '€',
+        min: convertCurrency(Math.round(totalMin)),
+        max: convertCurrency(Math.round(totalMax)),
+        breakdownMin: {
+          accommodation: convertCurrency(breakdownMin.accommodation),
+          dining: convertCurrency(breakdownMin.dining),
+          activities: convertCurrency(breakdownMin.activities),
+          transportation: convertCurrency(breakdownMin.transportation)
+        },
+        breakdownMax: {
+          accommodation: convertCurrency(breakdownMax.accommodation),
+          dining: convertCurrency(breakdownMax.dining),
+          activities: convertCurrency(breakdownMax.activities),
+          transportation: convertCurrency(breakdownMax.transportation)
+        },
+        currency: getCurrencySymbol(),
         travelers: parseInt(tripData.travelers?.match(/\d+/)?.[0]) || 1
       });
     };
 
     calculatePrice();
-  }, [tripData, hotels, restaurants]);
+  }, [tripData, hotels, restaurants, userPreferences?.currency]);
 
   const toggleDay = (dayNum) => {
     setExpandedDays(prev => ({
@@ -437,17 +561,17 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
           Back
         </button>
         <div className="desktop-actions">
-          <button className="action-icon-btn" title="Download PDF" onClick={handleDownloadPDF}>
+          <button className="action-icon-btn" title="Coming soon" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
           </button>
-          <button className="action-icon-btn" title="Share">
+          <button className="action-icon-btn" title="Coming soon" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
           </button>
-          <button className="review-book-btn">Review & Book</button>
+          <button className="review-book-btn">{t.reviewAndBook}</button>
         </div>
       </div>
 
@@ -457,11 +581,19 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
           <div className="gallery-main">
             {destinationImages.length > 0 ? (
               <>
-                <img 
-                  src={destinationImages[selectedImageIndex]?.url || getImageForLocation(tripData.destination, 0)} 
-                  alt={destinationImages[selectedImageIndex]?.description || tripData.destination}
-                  loading="lazy"
-                />
+                {destinationImages[selectedImageIndex]?.url ? (
+                  <img 
+                    src={destinationImages[selectedImageIndex].url} 
+                    alt={destinationImages[selectedImageIndex]?.description || tripData.destination}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="gallery-placeholder">
+                    <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                      <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
                 
                 {/* Navigation Arrows */}
                 {destinationImages.length > 1 && (
@@ -507,11 +639,11 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                 )}
               </>
             ) : (
-              <img 
-                src={getImageForLocation(tripData.destination, 0)} 
-                alt={tripData.destination}
-                loading="lazy"
-              />
+              <div className="gallery-placeholder">
+                <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                  <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             )}
           </div>
 
@@ -524,7 +656,15 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                   className={`gallery-thumb ${idx === selectedImageIndex ? 'active' : ''}`}
                   onClick={() => setSelectedImageIndex(idx)}
                 >
-                  <img src={image.urlThumb} alt={`${tripData.destination} view ${idx + 1}`} loading="lazy" />
+                  {image.urlThumb ? (
+                    <img src={image.urlThumb} alt={`${tripData.destination} view ${idx + 1}`} loading="lazy" />
+                  ) : (
+                    <div className="gallery-thumb-placeholder">
+                      <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -551,17 +691,18 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                 </svg>
               </div>
               <div className="flight-info">
-                <h3>Flight Route</h3>
+                <h3>{t.flightRoute}</h3>
                 <div className="flight-route-details">
                   <div className="flight-endpoint">
                     <span className="endpoint-city">{flightRouting.origin.city}</span>
                     {flightRouting.origin.hasAirport ? (
                       <span className="endpoint-airport">
-                        ✓ {flightRouting.origin.airportName} ({flightRouting.origin.airportCode})
+                        ✓ {flightRouting.origin.airportName}
+                        {flightRouting.origin.airportCode && ` (${flightRouting.origin.airportCode})`}
                       </span>
                     ) : (
                       <span className="endpoint-airport warning">
-                        ⚠ No direct airport - Via {flightRouting.origin.nearestAirport}
+                        ⚠ {t.noDirectAirport} {flightRouting.origin.nearestAirport}
                       </span>
                     )}
                   </div>
@@ -572,11 +713,12 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                     <span className="endpoint-city">{flightRouting.destination.city}</span>
                     {flightRouting.destination.hasAirport ? (
                       <span className="endpoint-airport">
-                        ✓ {flightRouting.destination.airportName} ({flightRouting.destination.airportCode})
+                        ✓ {flightRouting.destination.airportName}
+                        {flightRouting.destination.airportCode && ` (${flightRouting.destination.airportCode})`}
                       </span>
                     ) : (
                       <span className="endpoint-airport warning">
-                        ⚠ No direct airport - Via {flightRouting.destination.nearestAirport}
+                        ⚠ {t.noDirectAirport} {flightRouting.destination.nearestAirport}
                       </span>
                     )}
                   </div>
@@ -600,7 +742,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                 rel="noopener noreferrer"
                 className="flight-search-btn"
               >
-                <span>Search Flights on Skyscanner</span>
+                <span>{t.searchFlights}</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -615,29 +757,29 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
             className={`tab ${activeTab === 'overview' ? 'active' : ''}`}
             onClick={() => setActiveTab('overview')}
           >
-            Overview
+            {t.tripOverview}
           </button>
           <button 
             className={`tab ${activeTab === 'accommodations' ? 'active' : ''}`}
             onClick={() => setActiveTab('accommodations')}
           >
-            Accommodations
+            {t.accommodations}
           </button>
           <button 
             className={`tab ${activeTab === 'comments' ? 'active' : ''}`}
             onClick={() => setActiveTab('comments')}
           >
-            Comments
+            {t.comments}
           </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <div className="tab-content">
-            <h2 className="section-title">Trip Overview</h2>
+            <h2 className="section-title">{t.tripOverview}</h2>
             
             {/* Quick View Button */}
-            <button className="quick-view-btn">👁 Quick View</button>
+            <button className="quick-view-btn">👁 {t.quickView}</button>
 
             {/* Itinerary Days */}
             {tripData.itinerary && tripData.itinerary.length > 0 && (
@@ -657,7 +799,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                           const weather = getWeather(index);
                           return (
                             <span className="day-weather" title={weather.description}>
-                              {weather.emoji} {weather.temperature}°C
+                              {weather.emoji} {convertTemperature(weather.temperature)}{getTemperatureUnit()}
                             </span>
                           );
                         })()}
@@ -676,11 +818,11 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                           <div className="activity-item">
                             <div className="activity-icon-badge">✈️</div>
                             <div className="activity-info">
-                              <h4>Flight</h4>
+                              <h4>{t.flight}</h4>
                               <p className="activity-title">{day.transportation}</p>
                               {day.transportationDetails && (
                                 <div className="activity-meta">
-                                  <span>Estimated</span>
+                                  <span>{t.estimated}</span>
                                   <span>{day.transportationDetails}</span>
                                 </div>
                               )}
@@ -693,13 +835,22 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                           <div key={idx} className="activity-item">
                             <div className="activity-icon-badge">📍</div>
                             <div className="activity-info">
-                              <h4>{activity.type || 'Activity'}</h4>
+                              <h4>{activity.type || t.activity}</h4>
                               {activity.place && typeof activity.place === 'object' ? (
                                 /* Real place data with compact display */
                                 <div className="activity-place-compact">
-                                  {activity.place.images && activity.place.images.length > 0 && (
+                                  {activity.place.images && activity.place.images.length > 0 ? (
                                     <div className="activity-place-image">
-                                      <img src={activity.place.images[0]} alt={activity.place.name} loading="lazy" />
+                                      {activity.place.images[0] ? (
+                                        <img src={activity.place.images[0]} alt={activity.place.name} loading="lazy" />
+                                      ) : (
+                                        <div className="activity-placeholder">
+                                          <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                            <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                          </svg>
+                                        </div>
+                                      )}
                                       {activity.place.images.length > 1 && (
                                         <div className="activity-place-image-badge">
                                           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -708,6 +859,15 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                                           {activity.place.images.length}
                                         </div>
                                       )}
+                                    </div>
+                                  ) : (
+                                    <div className="activity-place-image">
+                                      <div className="activity-placeholder">
+                                        <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                          <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                          <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                      </div>
                                     </div>
                                   )}
                                   <div className="activity-place-details">
@@ -737,7 +897,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                                         rel="noopener noreferrer"
                                         className="activity-place-link"
                                       >
-                                        View on Maps
+                                        {t.viewOnMap}
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                         </svg>
@@ -763,13 +923,21 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                           <div className="activity-item">
                             <div className="activity-icon-badge">🏨</div>
                             <div className="activity-info">
-                              <h4>Accommodation</h4>
+                              <h4>{t.accommodation}</h4>
                               {typeof day.accommodation === 'object' && day.accommodation.name ? (
                                 /* Real hotel data with compact display */
                                 <div className="activity-place-compact">
-                                  {day.accommodation.images && day.accommodation.images.length > 0 && (
+                                  {day.accommodation.images && day.accommodation.images.length > 0 ? (
                                     <div className="activity-place-image">
-                                      <img src={day.accommodation.images[0]} alt={day.accommodation.name} loading="lazy" />
+                                      {day.accommodation.images[0] ? (
+                                        <img src={day.accommodation.images[0]} alt={day.accommodation.name} loading="lazy" />
+                                      ) : (
+                                        <div className="activity-placeholder">
+                                          <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                            <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                          </svg>
+                                        </div>
+                                      )}
                                       {day.accommodation.images.length > 1 && (
                                         <div className="activity-place-image-badge">
                                           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -778,6 +946,14 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                                           {day.accommodation.images.length}
                                         </div>
                                       )}
+                                    </div>
+                                  ) : (
+                                    <div className="activity-place-image">
+                                      <div className="activity-placeholder">
+                                        <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                          <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                        </svg>
+                                      </div>
                                     </div>
                                   )}
                                   <div className="activity-place-details">
@@ -802,7 +978,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                                         rel="noopener noreferrer"
                                         className="activity-place-link"
                                       >
-                                        View on Google Maps
+                                        {t.viewOnMap}
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                         </svg>
@@ -823,13 +999,22 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                           <div className="activity-item">
                             <div className="activity-icon-badge">🍽️</div>
                             <div className="activity-info">
-                              <h4>Dining</h4>
+                              <h4>{t.dining}</h4>
                               {typeof day.dining === 'object' && day.dining.name ? (
                                 /* Real restaurant data with compact display */
                                 <div className="activity-place-compact">
-                                  {day.dining.images && day.dining.images.length > 0 && (
+                                  {day.dining.images && day.dining.images.length > 0 ? (
                                     <div className="activity-place-image">
-                                      <img src={day.dining.images[0]} alt={day.dining.name} loading="lazy" />
+                                      {day.dining.images[0] ? (
+                                        <img src={day.dining.images[0]} alt={day.dining.name} loading="lazy" />
+                                      ) : (
+                                        <div className="activity-placeholder">
+                                          <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                            <path d="M12 2l2 4 4 .67L16 9l.67 4L12 11l-4.67 2L9 9 7 6.67 11 6z" />
+                                            <circle cx="12" cy="16" r="1" />
+                                          </svg>
+                                        </div>
+                                      )}
                                       {day.dining.images.length > 1 && (
                                         <div className="activity-place-image-badge">
                                           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -838,6 +1023,15 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                                           {day.dining.images.length}
                                         </div>
                                       )}
+                                    </div>
+                                  ) : (
+                                    <div className="activity-place-image">
+                                      <div className="activity-placeholder">
+                                        <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                          <path d="M12 2l2 4 4 .67L16 9l.67 4L12 11l-4.67 2L9 9 7 6.67 11 6z" />
+                                          <circle cx="12" cy="16" r="1" />
+                                        </svg>
+                                      </div>
                                     </div>
                                   )}
                                   <div className="activity-place-details">
@@ -862,7 +1056,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                                         rel="noopener noreferrer"
                                         className="activity-place-link"
                                       >
-                                        View on Maps
+                                        {t.viewOnMap}
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                         </svg>
@@ -885,23 +1079,23 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
             )}
 
             {/* Expand All Button */}
-            <button className="expand-all-btn">Expand All</button>
+            <button className="expand-all-btn">{t.expandAll}</button>
           </div>
         )}
 
         {activeTab === 'accommodations' && (
           <div className="tab-content">
             {/* Hotels Section */}
-            <h2 className="section-title">🏨 Recommended Hotels in {tripData.destination}</h2>
+            <h2 className="section-title">🏨 {t.recommendedHotels} {tripData.destination}</h2>
             <p className="accommodations-subtitle">
-              {hotels.length > 0 ? `${hotels.length} hotels found via Google Maps` : 'Loading hotel options...'}
+              {hotels.length > 0 ? `${hotels.length} ${t.hotelsFound}` : t.loadingHotelOptions}
             </p>
             
             {hotels.length > 0 ? (
               <div className="hotels-grid">
                 {hotels.map((hotel, index) => (
                   <div key={hotel.id || index} className="hotel-card">
-                    {hotel.images && hotel.images.length > 0 ? (
+                    {hotel.images && hotel.images.length > 0 && hotel.images[0] ? (
                       <div className="hotel-image">
                         <img src={hotel.images[0]} alt={hotel.name} loading="lazy" />
                         <div className="hotel-rating-badge">
@@ -912,9 +1106,9 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                         </div>
                       </div>
                     ) : (
-                      <div className="hotel-image hotel-image-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      <div className="accommodation-placeholder">
+                        <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                          <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                         </svg>
                       </div>
                     )}
@@ -932,7 +1126,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
-                          <span>View on Google Maps</span>
+                          <span>{t.viewOnMap}</span>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
@@ -947,21 +1141,21 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                <p>Loading hotels from Google Maps...</p>
+                <p>{t.loadingHotels}</p>
               </div>
             )}
 
             {/* Restaurants Section */}
-            <h2 className="section-title" style={{marginTop: '3rem'}}>🍽️ Recommended Restaurants in {tripData.destination}</h2>
+            <h2 className="section-title" style={{marginTop: '3rem'}}>🍽️ {t.recommendedRestaurants} {tripData.destination}</h2>
             <p className="accommodations-subtitle">
-              {restaurants.length > 0 ? `${restaurants.length} restaurants found via Google Maps` : 'Loading restaurant options...'}
+              {restaurants.length > 0 ? `${restaurants.length} ${t.restaurantsFound}` : t.loadingRestaurantOptions}
             </p>
             
             {restaurants.length > 0 ? (
               <div className="hotels-grid">
                 {restaurants.map((restaurant, index) => (
                   <div key={restaurant.id || index} className="hotel-card">
-                    {restaurant.images && restaurant.images.length > 0 ? (
+                    {restaurant.images && restaurant.images.length > 0 && restaurant.images[0] ? (
                       <div className="hotel-image">
                         <img src={restaurant.images[0]} alt={restaurant.name} loading="lazy" />
                         <div className="hotel-rating-badge">
@@ -972,9 +1166,10 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                         </div>
                       </div>
                     ) : (
-                      <div className="hotel-image hotel-image-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l2 2m0 0l2 2m-2-2v6m0 0l-2-2m2 2l2-2M3 12h18M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" />
+                      <div className="accommodation-placeholder">
+                        <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                          <path d="M12 2l2 4 4 .67L16 9l.67 4L12 11l-4.67 2L9 9 7 6.67 11 6z" />
+                          <circle cx="12" cy="16" r="1" />
                         </svg>
                       </div>
                     )}
@@ -992,7 +1187,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
-                          <span>View on Google Maps</span>
+                          <span>{t.viewOnMap}</span>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
@@ -1007,7 +1202,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l2 2m0 0l2 2m-2-2v6m0 0l-2-2m2 2l2-2M3 12h18M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" />
                 </svg>
-                <p>Loading restaurants from Google Maps...</p>
+                <p>{t.loadingRestaurants}</p>
               </div>
             )}
           </div>
@@ -1015,8 +1210,8 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
 
         {activeTab === 'comments' && (
           <div className="tab-content">
-            <h2>Comments</h2>
-            <p>No comments yet.</p>
+            <h2>{t.comments}</h2>
+            <p>{t.noCommentsYet}</p>
           </div>
         )}
 
@@ -1025,18 +1220,18 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
       {/* Footer with Price and Actions */}
       <div className="trip-panel-footer">
         <div className="trip-footer-info">
-          <h3>{tripData.duration} {tripData.purpose || 'Solo'} {tripData.destination} Trip</h3>
+          <h3>{tripData.duration} {tripData.purpose || 'Solo'} {tripData.destination} {t.trip}</h3>
           <div className="trip-footer-details">
             {priceEstimate ? (
               <>
                 <div className="price-estimate">
-                  <span className="price-label">Estimated Total</span>
+                  <span className="price-label">{t.estimatedTotal}</span>
                   <span className="price-amount">
                     {priceEstimate.currency}{priceEstimate.min.toLocaleString()} - {priceEstimate.currency}{priceEstimate.max.toLocaleString()}
                   </span>
                   {priceEstimate.travelers > 1 && (
                     <span className="price-per-person">
-                      ({priceEstimate.currency}{Math.round(priceEstimate.min / priceEstimate.travelers).toLocaleString()} - {priceEstimate.currency}{Math.round(priceEstimate.max / priceEstimate.travelers).toLocaleString()} per person)
+                      ({priceEstimate.currency}{Math.round(priceEstimate.min / priceEstimate.travelers).toLocaleString()} - {priceEstimate.currency}{Math.round(priceEstimate.max / priceEstimate.travelers).toLocaleString()} {t.perPerson})
                     </span>
                   )}
                 </div>
@@ -1046,55 +1241,55 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                   <div className="price-breakdown-tooltip">
-                    <div className="breakdown-header">Cost Breakdown</div>
+                    <div className="breakdown-header">{t.costBreakdown}</div>
                     <div className="breakdown-item">
-                      <span>🏨 Accommodation</span>
+                      <span>🏨 {t.accommodations}</span>
                       <span>{priceEstimate.currency}{priceEstimate.breakdownMin.accommodation.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.accommodation.toLocaleString()}</span>
                     </div>
                     <div className="breakdown-item">
-                      <span>🍽️ Dining</span>
+                      <span>🍽️ {t.dining}</span>
                       <span>{priceEstimate.currency}{priceEstimate.breakdownMin.dining.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.dining.toLocaleString()}</span>
                     </div>
                     <div className="breakdown-item">
-                      <span>🎭 Activities</span>
+                      <span>🎭 {t.activities}</span>
                       <span>{priceEstimate.currency}{priceEstimate.breakdownMin.activities.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.activities.toLocaleString()}</span>
                     </div>
                     <div className="breakdown-item">
-                      <span>🚇 Transportation</span>
+                      <span>🚇 {t.transportation}</span>
                       <span>{priceEstimate.currency}{priceEstimate.breakdownMin.transportation.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.transportation.toLocaleString()}</span>
                     </div>
                     <div className="breakdown-total">
-                      <span>Total Range</span>
+                      <span>{t.totalRange}</span>
                       <span>{priceEstimate.currency}{priceEstimate.min.toLocaleString()} - {priceEstimate.currency}{priceEstimate.max.toLocaleString()}</span>
                     </div>
                     <div className="breakdown-note">
-                      *Budget to Comfort range estimates
+                      {t.budgetToComfort}
                     </div>
                   </div>
                 </div>
               </>
             ) : (
-              <span>Calculating price...</span>
+              <span>{t.calculatingPrice}</span>
             )}
             <span>•</span>
             <span>{tripData.dates}</span>
           </div>
         </div>
         <div className="trip-footer-actions">
-          <button className="footer-btn secondary" onClick={handleDownloadPDF}>
+          <button className="footer-btn secondary" disabled title="Coming soon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{width: '16px', height: '16px', marginRight: '6px'}}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download PDF
+            {t.downloadPDF}
           </button>
-          <button className="footer-btn secondary">
+          <button className="footer-btn secondary" disabled title="Coming soon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{width: '16px', height: '16px', marginRight: '6px'}}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            Share
+            {t.share}
           </button>
           <button className="footer-btn primary">
-            Review & Book {priceEstimate ? `(${priceEstimate.currency}${priceEstimate.min.toLocaleString()}-${priceEstimate.max.toLocaleString()})` : ''}
+            {t.reviewAndBook} {priceEstimate ? `(${priceEstimate.currency}${priceEstimate.min.toLocaleString()}-${priceEstimate.max.toLocaleString()})` : ''}
           </button>
         </div>
       </div>
