@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@clerk/clerk-react": "^5.56.2",
+    "@clerk/clerk-sdk-node": "^4.13.23",
+    "@stripe/react-stripe-js": "^2.4.0",
+    "@stripe/stripe-js": "^2.2.0",
     "axios": "^1.6.0",
     "jspdf-autotable": "^5.0.2",
+    "mongoose": "^9.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.6",
     "react-scripts": "5.0.1"
   },
   "scripts": {

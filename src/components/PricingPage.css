@@ -1,0 +1,375 @@
+.pricing-page {
+  min-height: 100vh;
+  background: #fafafa;
+  padding: 0;
+}
+
+/* Header matching Landing Page */
+.pricing-page-header {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid #e5e5e5;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  font-size: 36px;
+  font-weight: 900;
+  color: #000;
+  margin: 0;
+  letter-spacing: -2px;
+}
+
+.logo-badge {
+  background: #000;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sign-in-button {
+  background: transparent;
+  color: #000;
+  border: 2px solid #000;
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.sign-in-button:hover {
+  background: #000;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.cta-button {
+  background: #000;
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cta-button:hover {
+  background: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.pricing-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.pricing-header {
+  text-align: center;
+  padding: 80px 0 60px;
+  position: relative;
+  background: white;
+  margin-bottom: 60px;
+}
+
+.pricing-header h1 {
+  font-size: 64px;
+  margin: 0 0 16px;
+  font-weight: 900;
+  color: #000;
+  letter-spacing: -3px;
+}
+
+.pricing-subtitle {
+  font-size: 20px;
+  color: #666;
+  font-weight: 400;
+  margin: 0;
+}
+
+.error-banner {
+  background: #ff4444;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 8px;
+  margin: 0 auto 40px;
+  max-width: 800px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.pricing-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 40px;
+  margin-bottom: 80px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.pricing-card {
+  background: white;
+  border-radius: 16px;
+  padding: 48px 40px;
+  position: relative;
+  border: 2px solid #e5e5e5;
+  transition: all 0.3s ease;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: #000;
+}
+
+.pricing-card.featured {
+  border: 3px solid #000;
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.pricing-card.featured:hover {
+  transform: scale(1.02) translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.plan-badge {
+  background: #000;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+
+.plan-badge.popular {
+  background: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.plan-price {
+  margin: 24px 0 32px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.plan-price .currency {
+  font-size: 32px;
+  font-weight: 900;
+  color: #000;
+  margin-top: 12px;
+}
+
+.plan-price .amount {
+  font-size: 80px;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+  letter-spacing: -4px;
+}
+
+.plan-price .period {
+  font-size: 20px;
+  color: #666;
+  font-weight: 500;
+  margin-top: 40px;
+  margin-left: 4px;
+}
+
+.plan-description {
+  text-align: center;
+  color: #666;
+  font-size: 17px;
+  margin-bottom: 40px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.5;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 40px 0;
+}
+
+.plan-features li {
+  padding: 14px 0;
+  color: #333;
+  font-size: 16px;
+  border-bottom: 1px solid #e5e5e5;
+  font-weight: 500;
+}
+
+.plan-features li:last-child {
+  border-bottom: none;
+}
+
+.subscribe-button {
+  width: 100%;
+  padding: 16px 32px;
+  background: #000;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.subscribe-button:hover:not(:disabled) {
+  background: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.subscribe-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.subscribe-button.featured {
+  background: #000;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.subscribe-button.featured:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.savings-badge {
+  text-align: center;
+  margin-top: 20px;
+  color: #000;
+  font-weight: 700;
+  font-size: 15px;
+  background: #f5f5f5;
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: inline-block;
+  width: 100%;
+}
+
+.pricing-footer {
+  text-align: center;
+  background: white;
+  padding: 60px 24px 80px;
+  margin-top: 40px;
+}
+
+.pricing-footer p {
+  font-size: 16px;
+  margin: 12px 0;
+  color: #666;
+  font-weight: 500;
+}
+
+.money-back {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 20px;
+  color: #000;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .logo {
+    font-size: 28px;
+  }
+
+  .logo-badge {
+    font-size: 11px;
+    padding: 5px 12px;
+  }
+
+  .nav-menu {
+    gap: 12px;
+  }
+
+  .sign-in-button,
+  .cta-button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .pricing-header {
+    padding: 60px 0 40px;
+  }
+
+  .pricing-header h1 {
+    font-size: 48px;
+    letter-spacing: -2px;
+  }
+
+  .pricing-subtitle {
+    font-size: 18px;
+  }
+
+  .pricing-cards {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 0;
+  }
+
+  .pricing-card {
+    padding: 36px 28px;
+  }
+
+  .pricing-card.featured {
+    transform: scale(1);
+  }
+
+  .pricing-card.featured:hover {
+    transform: translateY(-4px);
+  }
+
+  .plan-price .amount {
+    font-size: 64px;
+    letter-spacing: -3px;
+  }
+
+  .pricing-footer {
+    padding: 40px 24px 60px;
+  }
+}
+

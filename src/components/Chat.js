@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useAuth } from '@clerk/clerk-react';
 import './Chat.css';
 import Message from './Message';
 import TravelCard from './TravelCard';
 import TripPanel from './TripPanel';
 import config from '../config';
 import { useTranslations } from '../translations';
+import { chatAPI, itineraryAPI, extractItinerarySummary, generateChatTitle } from '../services/chatService';
 
 /**
  * Enrich itinerary with real hotel and restaurant data
@@ -62,16 +64,16 @@ const enrichItineraryWithRealData = (itinerary, travelData) => {
 
 const getGreeting = (langCode) => {
   const greetings = {
-    en: 'Hi! I\'m Arya, your travel agent. Where would you like to go? ✈️',
-    ro: 'Bună! Sunt Arya, agentul tău de turism. Unde ai dori să călătorești? ✈️',
-    es: '¡Hola! Soy Arya, tu agente de viajes. ¿A dónde te gustaría ir? ✈️',
-    fr: 'Salut ! Je suis Arya, votre agent de voyage. Où aimeriez-vous aller ? ✈️',
-    de: 'Hallo! Ich bin Arya, dein Reiseberater. Wohin möchtest du reisen? ✈️',
-    it: 'Ciao! Sono Arya, il tuo agente di viaggio. Dove vorresti andare? ✈️',
-    pt: 'Olá! Sou Arya, seu agente de viagens. Para onde gostaria de ir? ✈️',
-    ja: 'こんにちは！私はアリヤ、あなたの旅行エージェントです。どこに行きたいですか？✈️',
-    zh: '你好！我是Arya，你的旅行顾问。你想去哪里？✈️',
-    ar: 'مرحبا! أنا آريا، وكيل السفر الخاص بك. أين تريد أن تذهب؟ ✈️'
+    en: 'Hey there! I\'m Arya, your AI travel companion. 🌍 Excited to help you plan your next adventure! What\'s on your mind? Whether it\'s a dream destination or just browsing ideas, I\'m here to make it happen. ✈️',
+    ro: 'Salut! Sunt Arya, companion-ul tău de călătorie AI. 🌍 Super încântată să te ajut să îți planifici următoarea aventură! La ce te gândești? Fie că e o destinație de vis sau doar cauți idei, sunt aici să fac totul realitate. ✈️',
+    es: '¡Hola! Soy Arya, tu compañera de viajes AI. 🌍 ¡Emocionada de ayudarte a planear tu próxima aventura! ¿Qué tienes en mente? Ya sea un destino soñado o solo ideas, estoy aquí para hacerlo realidad. ✈️',
+    fr: 'Salut! Je suis Arya, votre compagnon de voyage IA. 🌍 Ravie de vous aider à planifier votre prochaine aventure! Qu\'avez-vous en tête? Destination de rêve ou juste des idées, je suis là pour réaliser tout ça. ✈️',
+    de: 'Hey! Ich bin Arya, deine KI-Reisebegleiterin. 🌍 Begeistert, dir bei deinem nächsten Abenteuer zu helfen! Was hast du im Kopf? Traumziel oder nur Ideen sammeln, ich bin hier um es wahr zu machen. ✈️',
+    it: 'Ciao! Sono Arya, la tua compagna di viaggio AI. 🌍 Entusiasta di aiutarti a pianificare la tua prossima avventura! Cosa hai in mente? Destinazione dei sogni o solo idee, sono qui per realizzarlo. ✈️',
+    pt: 'Olá! Sou Arya, sua companheira de viagem IA. 🌍 Animada para te ajudar a planejar sua próxima aventura! O que você tem em mente? Destino dos sonhos ou apenas ideias, estou aqui para tornar realidade. ✈️',
+    ja: 'こんにちは！Aryaです、あなたのAI旅行コンパニオン。🌍次の冒険を計画するのを手伝えることに興奮しています！何か考えていますか？夢の目的地でも、アイデアを探しているだけでも、実現するためにここにいます。✈️',
+    zh: '嘿！我是Arya，你的AI旅行伙伴。🌍很高兴帮你计划下一次冒险！你在想什么？无论是梦想目的地还是只是浏览想法，我都在这里实现它。✈️',
+    ar: 'مرحبا! أنا آريا، رفيقة سفرك بالذكاء الاصطناعي. 🌍 متحمسة لمساعدتك في التخطيط لمغامرتك القادمة! ما الذي تفكر فيه؟ سواء كانت وجهة أحلامك أو مجرد تصفح الأفكار، أنا هنا لتحقيقها. ✈️'
   };
   return greetings[langCode] || greetings.en;
 };
@@ -108,8 +110,9 @@ const getItineraryReadyMessage = (langCode) => {
   return messages[langCode] || messages.en;
 };
 
-const Chat = ({ userPreferences }) => {
+const Chat = ({ userPreferences, onChatCreated }) => {
   const t = useTranslations(userPreferences?.language || 'en');
+  const { getToken } = useAuth();
   
   const [messages, setMessages] = useState([
     {
@@ -133,6 +136,8 @@ const Chat = ({ userPreferences }) => {
     duration: null,
     purpose: null
   });
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [isSavingChat, setIsSavingChat] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const lastMessageTimestamp = useRef(null);
@@ -334,15 +339,144 @@ const Chat = ({ userPreferences }) => {
     return updated;
   };
 
+  // Create a new chat and save it
+  const createNewChat = async (firstMessage) => {
+    if (!getToken) return null;
+    
+    try {
+      setIsSavingChat(true);
+      
+      // Generate smart title based on trip details
+      const smartTitle = generateChatTitle(
+        firstMessage,
+        collectedInfo.destination,
+        collectedInfo.duration
+      );
+      
+      const result = await chatAPI.createChat(
+        smartTitle,
+        firstMessage,
+        getToken
+      );
+      
+      const chatId = result.chat._id;
+      setCurrentChatId(chatId);
+      console.log('✅ Created new chat:', chatId, 'Title:', smartTitle);
+      
+      // Notify parent component
+      if (onChatCreated) {
+        onChatCreated(chatId);
+      }
+      
+      // Refresh sidebar
+      if (window.refreshChatHistory) {
+        setTimeout(() => window.refreshChatHistory(), 300);
+      }
+      
+      return chatId;
+    } catch (error) {
+      console.error('Failed to create chat:', error);
+      return null;
+    } finally {
+      setIsSavingChat(false);
+    }
+  };
+
+  // Save messages to the current chat
+  const saveMessagesToChat = async (userMsg, assistantMsg) => {
+    if (!currentChatId || !getToken) return;
+
+    try {
+      // Save user message
+      await chatAPI.addMessage(
+        currentChatId,
+        'user',
+        userMsg,
+        getToken
+      );
+      
+      // Save assistant message
+      await chatAPI.addMessage(
+        currentChatId,
+        'assistant',
+        assistantMsg,
+        getToken
+      );
+      
+      console.log('✅ Saved messages to chat');
+      
+      // Refresh sidebar to update message count and preview
+      if (window.refreshChatHistory) {
+        setTimeout(() => window.refreshChatHistory(), 200);
+      }
+    } catch (error) {
+      console.error('Failed to save messages:', error);
+    }
+  };
+
+  // Load an existing chat
+  const loadChat = async (chatId) => {
+    if (!getToken) return;
+    
+    try {
+      setIsLoading(true);
+      const result = await chatAPI.getChat(chatId, getToken);
+      
+      if (result.chat) {
+        // Convert chat messages to component format
+        const loadedMessages = result.chat.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp)
+        }));
+        
+        setMessages(loadedMessages);
+        setCurrentChatId(chatId);
+        console.log('✅ Loaded chat:', chatId);
+      }
+    } catch (error) {
+      console.error('Failed to load chat:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Start a brand new chat
+  const startNewChat = () => {
+    setMessages([
+      {
+        role: 'assistant',
+        content: getGreeting(userPreferences?.language || 'en'),
+        timestamp: new Date()
+      }
+    ]);
+    setCurrentChatId(null);
+    setCurrentTrip(null);
+    setShowTripPanel(false);
+    setCollectedInfo({
+      destination: null,
+      origin: null,
+      travelers: null,
+      dates: null,
+      duration: null,
+      purpose: null
+    });
+  };
+
+  // Expose functions to parent
+  useEffect(() => {
+    if (window.chatComponent) {
+      window.chatComponent.loadChat = loadChat;
+      window.chatComponent.startNewChat = startNewChat;
+    } else {
+      window.chatComponent = { loadChat, startNewChat };
+    }
+  }, []);
+
   const handleSendMessage = async (messageText = null) => {
     const textToSend = messageText || inputMessage.trim();
     
     if (!textToSend || isLoading) return;
-
-    // Extract info from this message
-    const updatedInfo = extractInfoFromMessage(textToSend);
-    setCollectedInfo(updatedInfo);
-    console.log('📋 Collected info so far:', updatedInfo);
 
     const userMessage = {
       role: 'user',
@@ -363,7 +497,11 @@ const Chat = ({ userPreferences }) => {
 
     try {
       console.log('📤 Sending message with preferences:', userPreferences);
-      console.log('📤 Sending with collected info:', updatedInfo);
+      console.log('📤 Sending with collected info:', collectedInfo);
+      
+      // Get auth token
+      const token = await getToken();
+      
       const response = await axios.post(`${config.API_URL}/api/chat`, {
         message: textToSend,
         conversationHistory: messages.map(msg => ({
@@ -371,30 +509,99 @@ const Chat = ({ userPreferences }) => {
           content: msg.content
         })),
         userPreferences: userPreferences || { language: 'en', currency: 'USD', temperatureUnit: 'C' },
-        collectedInfo: updatedInfo
+        collectedInfo: collectedInfo // Use accumulated state, not extracted info
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
 
       if (response.data.success) {
         const responseContent = response.data.message;
         
-        // Extract destination from AI response if it mentions a city
-        if (!collectedInfo.destination && !responseContent.includes('TRIP_READY')) {
-          const cityMentionPattern = /(?:în|in|to|deci, în)\s+([A-Z][a-zăâîșț]+(?:\s*,?\s*[A-Z][a-zăâîșț]+)*)/;
-          const cityMatch = responseContent.match(cityMentionPattern);
-          if (cityMatch) {
-            const extractedDest = cityMatch[1].trim();
-            // Update collectedInfo with extracted destination
-            setCollectedInfo(prev => ({ ...prev, destination: extractedDest }));
-            console.log('✅ Extracted destination from AI response:', extractedDest);
-          }
+        // Update collectedInfo from backend response (LangGraph tracks state!)
+        if (response.data.collectedInfo) {
+          console.log('📥 Updating collected info from backend:', response.data.collectedInfo);
+          setCollectedInfo(response.data.collectedInfo);
         }
         
-        // Check if response contains TRIP_READY
-        console.log('🔍 Checking response for TRIP_READY...');
-        console.log('Response content:', responseContent);
+        // Check if itinerary was generated (new LangGraph format)
+        console.log('🔍 Checking if itinerary was generated...');
+        console.log('itineraryGenerated:', response.data.itineraryGenerated);
+        console.log('itinerary:', response.data.itinerary);
+        
+        if (response.data.itineraryGenerated && response.data.itinerary) {
+          console.log('✅ Itinerary generated! Displaying in Trip Panel...');
+          
+          // Add the AI's friendly message to chat with itinerary button
+          const aiMessage = {
+            role: 'assistant',
+            content: responseContent, // The friendly message from backend
+            timestamp: new Date(),
+            hasItineraryButton: true // Show "View Full Itinerary" button
+          };
+          setMessages(prev => [...prev, aiMessage]);
+          
+          // The itinerary is already complete - no need to generate again
+          const fullItinerary = response.data.itinerary;
+          console.log('📋 Full itinerary received:', fullItinerary);
+          
+          // Enrich with travel data if available
+          const enrichedItinerary = response.data.travelData 
+            ? enrichItineraryWithRealData(fullItinerary.itinerary, response.data.travelData)
+            : fullItinerary.itinerary;
+          
+          const enrichedTrip = {
+            ...fullItinerary,
+            itinerary: enrichedItinerary
+          };
+          
+          // Set the trip and show panel
+          setCurrentTrip(enrichedTrip);
+          setShowTripPanel(true);
+          setIsGeneratingTrip(false);
+          
+          // Save to database
+          try {
+            const token = await getToken();
+            
+            // Ensure we have a chatId (create one if needed)
+            let chatIdToUse = currentChatId;
+            if (!chatIdToUse) {
+              console.log('📝 No chat exists yet, creating one for the itinerary...');
+              const destination = enrichedTrip.destination || collectedInfo.destination || 'Unknown';
+              const tripMessage = `Trip to ${destination}`;
+              const chatResult = await createNewChat(tripMessage);
+              chatIdToUse = chatResult;
+            }
+            
+            // Extract summary data
+            const summary = extractItinerarySummary(enrichedTrip);
+            
+            const saveResult = await itineraryAPI.createItinerary({
+              chatId: chatIdToUse,
+              destination: enrichedTrip.destination || collectedInfo.destination || 'Unknown',
+              startDate: enrichedTrip.dates?.split(' - ')[0] || collectedInfo.dates,
+              endDate: enrichedTrip.dates?.split(' - ')[1],
+              title: `Trip to ${enrichedTrip.destination || collectedInfo.destination || 'Unknown'}`,
+              description: `${enrichedTrip.duration || collectedInfo.duration || ''} ${enrichedTrip.purpose || collectedInfo.purpose || 'trip'}`.trim(),
+              itineraryData: enrichedTrip,
+              summary: summary
+            }, token);
+            console.log('✅ Itinerary saved to database:', saveResult);
+          } catch (saveError) {
+            console.error('❌ Error saving itinerary:', saveError);
+          }
+          
+          // Skip the old TRIP_READY flow
+          return;
+        }
+        
+        // Fallback: Check if response contains old TRIP_READY format
+        console.log('🔍 Checking response for old TRIP_READY format...');
         
         if (responseContent.includes('TRIP_READY:') || responseContent.includes('TRIP_READY')) {
-          console.log('✅ TRIP_READY detected!');
+          console.log('✅ Old TRIP_READY format detected!');
           // Parse trip data
           let tripInfo = parseTripReady(responseContent);
           console.log('📋 Parsed trip info:', tripInfo);
@@ -493,6 +700,19 @@ const Chat = ({ userPreferences }) => {
             timestamp: new Date()
           };
           setMessages(prev => [...prev, assistantMessage]);
+          
+          // Save to database: Create chat on first message, then save messages
+          if (!currentChatId && messages.length === 1) {
+            // First user message - create new chat
+            const chatId = await createNewChat(textToSend);
+            if (chatId) {
+              // Save the assistant response
+              await chatAPI.addMessage(chatId, 'assistant', responseContent, getToken);
+            }
+          } else if (currentChatId) {
+            // Existing chat - save both messages
+            await saveMessagesToChat(textToSend, responseContent);
+          }
         }
 
         // Update travel data if available
@@ -735,6 +955,10 @@ Start your response with { and end with }`;
 
       console.log('📤 Sending itinerary generation request...');
       console.log('📦 Sending with tripInfo:', tripInfo);
+      
+      // Get auth token
+      const token = await getToken();
+      
       const response = await axios.post(`${config.API_URL}/api/chat`, {
         message: prompt,
         conversationHistory: messages.map(msg => ({
@@ -743,6 +967,10 @@ Start your response with { and end with }`;
         })),
         userPreferences: userPreferences || { language: 'en', currency: 'USD', temperatureUnit: 'C' },
         collectedInfo: tripInfo
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
       console.log('📥 Got response:', response.data);
 
@@ -838,6 +1066,40 @@ Start your response with { and end with }`;
             console.log('🎯 Setting showTripPanel to true');
             setCurrentTrip(itineraryData);
             setShowTripPanel(true); // Show Trip Panel when itinerary is created
+            
+            // Save itinerary to database
+            try {
+              // Ensure we have a chatId (create one if needed)
+              let chatIdToUse = currentChatId;
+              if (!chatIdToUse && getToken) {
+                console.log('📝 No chat exists yet, creating one for the itinerary...');
+                const tripMessage = `Trip to ${destination}`;
+                const chatResult = await createNewChat(tripMessage);
+                chatIdToUse = chatResult;
+              }
+              
+              if (chatIdToUse && getToken) {
+                const summary = extractItinerarySummary(itineraryData);
+                await itineraryAPI.createItinerary(
+                  {
+                    chatId: chatIdToUse,
+                    destination: destination,
+                    startDate: dates?.split(' - ')[0],
+                    endDate: dates?.split(' - ')[1],
+                    title: `Trip to ${destination}`,
+                    description: `${duration} ${purpose} trip`,
+                    itineraryData: itineraryData,
+                    summary: summary
+                  },
+                  getToken
+                );
+                console.log('✅ Saved itinerary to database');
+              } else {
+                console.warn('⚠️ Cannot save itinerary: no chatId available');
+              }
+            } catch (error) {
+              console.error('Failed to save itinerary:', error);
+            }
           }
         } catch (e) {
           console.error('❌ Failed to parse itinerary JSON:', e);
@@ -940,20 +1202,7 @@ Start your response with { and end with }`;
         </div>
       )}
 
-      {/* Left Sidebar */}
-      <div className="chat-sidebar">
-        <button className="new-chat-btn">
-          <span>{t.newChat}</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="9" y1="9" x2="15" y2="9"></line>
-            <line x1="9" y1="15" x2="15" y2="15"></line>
-          </svg>
-        </button>
-      </div>
-
-
-      {/* Chat Box - Middle Column */}
+      {/* Chat Box - Main Chat Area */}
       <div className="chat-box">
         {/* Messages Area */}
         <div className="messages-area">

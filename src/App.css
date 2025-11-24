@@ -5,15 +5,40 @@
   background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
 }
 
+.App.app-with-sidebar {
+  flex-direction: row;
+}
+
+.app-main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 0;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .app-main-container {
+    margin-left: 0;
+  }
+}
+
 .app-header {
-  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: white;
+  padding: 1rem 2rem;
+  padding-left: 300px;
+  border-bottom: 1px solid #e5e5e5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 50;
   backdrop-filter: blur(10px);
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Adjust header padding when sidebar is collapsed */
+body:has(.chat-history.collapsed) .app-header {
+  padding-left: 70px;
 }
 
 .header-content {
@@ -31,28 +56,15 @@
 }
 
 .app-title {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-size: 1.75rem;
-  font-weight: 800;
+  color: #000;
+  font-size: 1.875rem;
+  font-weight: 900;
   margin: 0;
-  letter-spacing: -0.05em;
+  letter-spacing: -2px;
 }
 
 .mvp-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.625rem;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  color: #78350f;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  border-radius: 4px;
-  letter-spacing: 0.05em;
-  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
-  text-transform: uppercase;
+  display: none;
 }
 
 .app-subtitle {
@@ -93,24 +105,222 @@
 }
 
 .header-btn-settings {
-  background: #f3f4f6;
-  color: #4b5563;
-  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  color: #000;
+  border: 1px solid #e5e5e5;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
 .header-btn-settings:hover {
-  background: #e5e7eb;
-  color: #1f2937;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+  background: #000;
+  color: white;
+  border-color: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.header-btn-settings:hover svg {
+  color: white;
 }
 
 .header-btn-settings svg {
   width: 20px;
   height: 20px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+/* My Trips Button */
+.header-btn-trips {
+  background: linear-gradient(135deg, #2c2c2c 0%, #5a5a5a 100%);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-btn-trips:hover {
+  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.header-btn-trips svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.user-profile-section {
+  display: flex;
+  align-items: center;
+  margin-left: 0.5rem;
+}
+
+.user-profile-section button {
+  transition: all 0.2s;
+}
+
+.user-profile-section button:hover {
+  transform: scale(1.05);
+}
+
+/* Header Preferences Controls */
+.header-preferences {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.preference-dropdown {
+  position: relative;
+}
+
+.preference-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2c2c2c;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 80px;
+  justify-content: center;
+}
+
+.preference-btn:hover {
+  background: #f0f0f0;
+  border-color: #d0d0d0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.preference-btn:active {
+  transform: translateY(0);
+}
+
+.preference-icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.preference-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.dropdown-arrow {
+  margin-left: 0.125rem;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.preference-btn:hover .dropdown-arrow {
+  opacity: 1;
+}
+
+.temperature-toggle {
+  background: #fafafa;
+}
+
+.temperature-toggle:hover {
+  background: #000;
+  border-color: #000;
+}
+
+.temperature-toggle:hover .preference-label {
+  color: white;
+}
+
+.preference-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 100;
+  animation: dropdownSlide 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: none;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2c2c2c;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #f9f9f9;
+}
+
+.dropdown-item.active {
+  background: #f0f0ff;
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.dropdown-item.active:hover {
+  background: #e8e8ff;
+}
+
+.item-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.item-name {
+  flex: 1;
+}
+
+.check-icon {
+  color: #7c3aed;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .app-main {
@@ -141,24 +351,51 @@
     font-size: 0.8125rem;
   }
 
-  .header-btn-settings {
+  .header-btn-trips {
     padding: 0.5rem 0.75rem;
-  }
-
-  /* Hide settings text on mobile, keep icon */
-  .header-btn-settings svg {
-    margin: 0;
   }
 
   .app-subtitle {
     font-size: 0.875rem;
   }
+
+  /* Preferences Controls */
+  .header-preferences {
+    gap: 0.375rem;
+  }
+
+  .preference-btn {
+    padding: 0.5rem 0.625rem;
+    min-width: 70px;
+  }
+
+  .preference-label {
+    font-size: 0.75rem;
+  }
+
+  .preference-dropdown-menu {
+    min-width: 180px;
+  }
 }
 
 @media (max-width: 480px) {
-  .header-btn-settings {
+  .header-btn-trips {
     padding: 0.5rem;
     min-width: 40px;
+  }
+
+  /* Hide labels on very small screens */
+  .preference-btn .preference-label {
+    display: none;
+  }
+
+  .preference-btn {
+    min-width: 45px;
+    padding: 0.5rem;
+  }
+
+  .header-preferences {
+    gap: 0.25rem;
   }
 }
 
