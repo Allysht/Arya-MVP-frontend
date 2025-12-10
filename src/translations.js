@@ -102,6 +102,9 @@ export const translations = {
     loadingRestaurants: 'Loading restaurants from Google Maps...',
     loadingRestaurantOptions: 'Loading restaurant options...',
     noCommentsYet: 'No comments yet.',
+    bookOnBooking: 'Book on Booking.com',
+    bookRestaurant: 'Reserve Table',
+    loadingBooking: 'Finding booking link...',
   },
   
   ro: {
@@ -207,6 +210,9 @@ export const translations = {
     loadingRestaurants: 'Încărcare restaurante din Google Maps...',
     loadingRestaurantOptions: 'Încărcare opțiuni restaurante...',
     noCommentsYet: 'Niciun comentariu încă.',
+    bookOnBooking: 'Rezervă pe Booking.com',
+    bookRestaurant: 'Rezervă Masă',
+    loadingBooking: 'Căutare link rezervare...',
   },
   
   es: {
@@ -284,6 +290,9 @@ export const translations = {
     loadingRestaurants: 'Cargando restaurantes desde Google Maps...',
     loadingRestaurantOptions: 'Cargando opciones de restaurantes...',
     noCommentsYet: 'No hay comentarios aún.',
+    bookOnBooking: 'Reservar en Booking.com',
+    bookRestaurant: 'Reservar Mesa',
+    loadingBooking: 'Buscando enlace de reserva...',
   },
   
   fr: {
@@ -361,6 +370,9 @@ export const translations = {
     loadingRestaurants: 'Chargement des restaurants depuis Google Maps...',
     loadingRestaurantOptions: 'Chargement des options de restaurants...',
     noCommentsYet: 'Pas encore de commentaires.',
+    bookOnBooking: 'Réserver sur Booking.com',
+    bookRestaurant: 'Réserver une Table',
+    loadingBooking: 'Recherche du lien de réservation...',
   }
 };
 

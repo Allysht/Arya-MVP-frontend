@@ -456,6 +456,38 @@
   transform: translateX(4px);
 }
 
+/* Booking.com link styling */
+.place-link.booking-link {
+  color: #003580;
+  font-weight: 600;
+  margin-left: 1rem;
+  background: linear-gradient(135deg, rgba(0, 53, 128, 0.1) 0%, rgba(0, 34, 79, 0.05) 100%);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.place-link.booking-link:hover {
+  color: #004a9f;
+  background: linear-gradient(135deg, rgba(0, 53, 128, 0.15) 0%, rgba(0, 34, 79, 0.1) 100%);
+  transform: translateX(4px);
+}
+
+/* Restaurant reservation link styling */
+.place-link.restaurant-link {
+  color: #00af87;
+  font-weight: 600;
+  margin-left: 1rem;
+  background: linear-gradient(135deg, rgba(0, 175, 135, 0.1) 0%, rgba(0, 137, 123, 0.05) 100%);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.place-link.restaurant-link:hover {
+  color: #00c99a;
+  background: linear-gradient(135deg, rgba(0, 175, 135, 0.15) 0%, rgba(0, 137, 123, 0.1) 100%);
+  transform: translateX(4px);
+}
+
 .place-text {
   font-size: 15px;
   color: #666;

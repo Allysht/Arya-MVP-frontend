@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { itineraryAPI } from '../services/chatService';
 import axios from 'axios';
 import config from '../config';
 import './ItineraryView.css';
+
+// Translation helper for booking buttons
+const translations = {
+  en: { bookOnBooking: 'Book on Booking.com', bookRestaurant: 'Reserve Table' },
+  ro: { bookOnBooking: 'Rezervă pe Booking.com', bookRestaurant: 'Rezervă Masă' },
+  es: { bookOnBooking: 'Reservar en Booking.com', bookRestaurant: 'Reservar Mesa' },
+  fr: { bookOnBooking: 'Réserver sur Booking.com', bookRestaurant: 'Réserver une Table' }
+};
 
 const ItineraryView = () => {
   const { id } = useParams();
@@ -15,6 +23,10 @@ const ItineraryView = () => {
   const [error, setError] = useState(null);
   const [destinationImages, setDestinationImages] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [hotelBookingLinks, setHotelBookingLinks] = useState({});
+  const [restaurantBookingLinks, setRestaurantBookingLinks] = useState({});
+  
+  const t = translations.en; // Default to English for now
 
   useEffect(() => {
     fetchItinerary();
@@ -51,6 +63,71 @@ const ItineraryView = () => {
     } catch (error) {
       console.error('Error fetching destination images:', error);
     }
+  };
+
+  // Fetch booking link for a hotel
+  const fetchHotelBookingLink = useCallback(async (hotelName, location) => {
+    const cacheKey = `${hotelName}-${location}`;
+    
+    if (hotelBookingLinks[cacheKey]) return;
+
+    try {
+      const response = await axios.post(`${config.API_URL}/api/booking/hotel`, {
+        name: hotelName,
+        location
+      });
+
+      if (response.data.success || response.data.bookingUrl) {
+        setHotelBookingLinks(prev => ({
+          ...prev,
+          [cacheKey]: response.data.bookingUrl
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching hotel booking link:', error);
+      setHotelBookingLinks(prev => ({
+        ...prev,
+        [cacheKey]: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${hotelName} ${location}`)}`
+      }));
+    }
+  }, [hotelBookingLinks]);
+
+  // Fetch booking link for a restaurant
+  const fetchRestaurantBookingLink = useCallback(async (restaurantName, location) => {
+    const cacheKey = `${restaurantName}-${location}`;
+    
+    if (restaurantBookingLinks[cacheKey]) return;
+
+    try {
+      const response = await axios.post(`${config.API_URL}/api/booking/restaurant`, {
+        name: restaurantName,
+        location
+      });
+
+      if (response.data.success || response.data.bookingUrl) {
+        setRestaurantBookingLinks(prev => ({
+          ...prev,
+          [cacheKey]: response.data.bookingUrl
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching restaurant booking link:', error);
+      setRestaurantBookingLinks(prev => ({
+        ...prev,
+        [cacheKey]: `https://www.tripadvisor.com/Search?q=${encodeURIComponent(`${restaurantName} ${location}`)}`
+      }));
+    }
+  }, [restaurantBookingLinks]);
+
+  // Helper to get booking link
+  const getHotelBookingLink = (hotelName, destination) => {
+    const cacheKey = `${hotelName}-${destination}`;
+    return hotelBookingLinks[cacheKey] || `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${hotelName} ${destination}`)}`;
+  };
+
+  const getRestaurantBookingLink = (restaurantName, destination) => {
+    const cacheKey = `${restaurantName}-${destination}`;
+    return restaurantBookingLinks[cacheKey] || `https://www.tripadvisor.com/Search?q=${encodeURIComponent(`${restaurantName} ${destination}`)}`;
   };
 
   const handleDelete = async () => {
@@ -286,6 +363,16 @@ const ItineraryView = () => {
                                 View on Google Maps →
                               </a>
                             )}
+                            {/* Booking.com button */}
+                            <a 
+                              href={getHotelBookingLink(day.accommodation.name, itinerary.destination)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="place-link booking-link"
+                              onMouseEnter={() => fetchHotelBookingLink(day.accommodation.name, itinerary.destination)}
+                            >
+                              {t.bookOnBooking} →
+                            </a>
                           </div>
                         </div>
                       ) : (
@@ -338,6 +425,16 @@ const ItineraryView = () => {
                                 View on Google Maps →
                               </a>
                             )}
+                            {/* Restaurant reservation button */}
+                            <a 
+                              href={getRestaurantBookingLink(day.dining.name, itinerary.destination)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="place-link restaurant-link"
+                              onMouseEnter={() => fetchRestaurantBookingLink(day.dining.name, itinerary.destination)}
+                            >
+                              {t.bookRestaurant} →
+                            </a>
                           </div>
                         </div>
                       ) : (

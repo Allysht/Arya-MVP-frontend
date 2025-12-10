@@ -693,6 +693,95 @@
   opacity: 0.8;
 }
 
+/* Booking.com Button Styles */
+.booking-btn {
+  background: linear-gradient(135deg, #003580 0%, #00224f 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 53, 128, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.booking-btn:hover {
+  background: linear-gradient(135deg, #004a9f 0%, #003580 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 53, 128, 0.4);
+}
+
+.booking-btn .booking-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.booking-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.booking-btn svg:last-child {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+}
+
+/* Restaurant Booking Button */
+.restaurant-booking-btn {
+  background: linear-gradient(135deg, #00af87 0%, #00897b 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 175, 135, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.restaurant-booking-btn:hover {
+  background: linear-gradient(135deg, #00c99a 0%, #00af87 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 175, 135, 0.4);
+}
+
+.restaurant-booking-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.restaurant-booking-btn svg:last-child {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+}
+
+/* Activity place booking links */
+.activity-place-link.booking-link {
+  color: #003580;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.activity-place-link.booking-link:hover {
+  color: #004a9f;
+}
+
+.activity-place-link.restaurant-link {
+  color: #00af87;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.activity-place-link.restaurant-link:hover {
+  color: #00c99a;
+}
+
 .empty-accommodations {
   text-align: center;
   padding: 4rem 2rem;

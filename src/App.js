@@ -22,7 +22,6 @@ const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 function ChatApp() {
   const [showPreferences, setShowPreferences] = useState(false);
   const [userPreferences, setUserPreferences] = useState(null);
-  const [showFirstTimePreferences, setShowFirstTimePreferences] = useState(false);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [refreshHistory, setRefreshHistory] = useState(0);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -77,10 +76,10 @@ function ChatApp() {
     // Check if user has set preferences before
     const savedPrefs = localStorage.getItem('userPreferences');
     if (!savedPrefs) {
-      // First time user - show preferences popup after a short delay
-      setTimeout(() => {
-        setShowFirstTimePreferences(true);
-      }, 500);
+      // First time user - set default preferences silently
+      const defaultPrefs = { language: 'en', currency: 'USD', temperatureUnit: 'C' };
+      localStorage.setItem('userPreferences', JSON.stringify(defaultPrefs));
+      setUserPreferences(defaultPrefs);
     } else {
       setUserPreferences(JSON.parse(savedPrefs));
     }
@@ -102,7 +101,6 @@ function ChatApp() {
 
   const handlePreferencesSave = (preferences) => {
     setUserPreferences(preferences);
-    setShowFirstTimePreferences(false);
   };
 
   const updateLanguage = (langCode) => {
@@ -289,17 +287,8 @@ function ChatApp() {
 
       {/* Preferences Modal */}
       <Preferences 
-        isOpen={showPreferences || showFirstTimePreferences}
-        onClose={() => {
-          setShowPreferences(false);
-          if (showFirstTimePreferences) {
-            // If closing first-time popup without saving, use defaults
-            const defaultPrefs = { language: 'en', currency: 'USD', temperatureUnit: 'C' };
-            localStorage.setItem('userPreferences', JSON.stringify(defaultPrefs));
-            setUserPreferences(defaultPrefs);
-            setShowFirstTimePreferences(false);
-          }
-        }}
+        isOpen={showPreferences}
+        onClose={() => setShowPreferences(false)}
         onSave={handlePreferencesSave}
       />
     </div>

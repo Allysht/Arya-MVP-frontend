@@ -136,6 +136,9 @@ const Chat = ({ userPreferences, onChatCreated }) => {
     duration: null,
     purpose: null
   });
+  const [currentSlot, setCurrentSlot] = useState('destination'); // Track current slot being filled
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false); // Track confirmation state
+  const [offeredSuggestions, setOfferedSuggestions] = useState(false); // Track if we offered suggestions
   const [currentChatId, setCurrentChatId] = useState(null);
   const [isSavingChat, setIsSavingChat] = useState(false);
   const messagesEndRef = useRef(null);
@@ -461,6 +464,9 @@ const Chat = ({ userPreferences, onChatCreated }) => {
       duration: null,
       purpose: null
     });
+    setCurrentSlot('destination'); // Reset to first slot
+    setAwaitingConfirmation(false); // Reset confirmation state
+    setOfferedSuggestions(false); // Reset suggestions state
   };
 
   // Expose functions to parent
@@ -502,6 +508,10 @@ const Chat = ({ userPreferences, onChatCreated }) => {
       // Get auth token
       const token = await getToken();
       
+      console.log('🎯 Sending current slot:', currentSlot);
+      console.log('⏳ Sending awaiting confirmation:', awaitingConfirmation);
+      console.log('💡 Sending offered suggestions:', offeredSuggestions);
+      
       const response = await axios.post(`${config.API_URL}/api/chat`, {
         message: textToSend,
         conversationHistory: messages.map(msg => ({
@@ -509,7 +519,10 @@ const Chat = ({ userPreferences, onChatCreated }) => {
           content: msg.content
         })),
         userPreferences: userPreferences || { language: 'en', currency: 'USD', temperatureUnit: 'C' },
-        collectedInfo: collectedInfo // Use accumulated state, not extracted info
+        collectedInfo: collectedInfo,
+        currentSlot: currentSlot,
+        awaitingConfirmation: awaitingConfirmation,
+        offeredSuggestions: offeredSuggestions
       }, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -523,6 +536,20 @@ const Chat = ({ userPreferences, onChatCreated }) => {
         if (response.data.collectedInfo) {
           console.log('📥 Updating collected info from backend:', response.data.collectedInfo);
           setCollectedInfo(response.data.collectedInfo);
+        }
+        
+        // Update slot tracking state from backend
+        if (response.data.currentSlot) {
+          console.log('🎯 Updating current slot from backend:', response.data.currentSlot);
+          setCurrentSlot(response.data.currentSlot);
+        }
+        if (response.data.awaitingConfirmation !== undefined) {
+          console.log('⏳ Updating awaiting confirmation from backend:', response.data.awaitingConfirmation);
+          setAwaitingConfirmation(response.data.awaitingConfirmation);
+        }
+        if (response.data.offeredSuggestions !== undefined) {
+          console.log('💡 Updating offered suggestions from backend:', response.data.offeredSuggestions);
+          setOfferedSuggestions(response.data.offeredSuggestions);
         }
         
         // Check if itinerary was generated (new LangGraph format)

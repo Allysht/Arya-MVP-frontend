@@ -18,6 +18,9 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
   const [restaurants, setRestaurants] = useState([]);
   const [weatherData, setWeatherData] = useState(null);
   const [priceEstimate, setPriceEstimate] = useState(null);
+  const [hotelBookingLinks, setHotelBookingLinks] = useState({});
+  const [restaurantBookingLinks, setRestaurantBookingLinks] = useState({});
+  const [loadingBookingLinks, setLoadingBookingLinks] = useState({});
 
   // Currency conversion helper
   const convertCurrency = (amount, fromCurrency = 'EUR') => {
@@ -439,6 +442,97 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
       ...prev,
       [dayNum]: !prev[dayNum]
     }));
+  };
+
+  // Fetch booking link for a hotel
+  const fetchHotelBookingLink = async (hotelName, location) => {
+    const cacheKey = `${hotelName}-${location}`;
+    
+    // Check if already loaded or loading
+    if (hotelBookingLinks[cacheKey] || loadingBookingLinks[cacheKey]) {
+      return;
+    }
+
+    setLoadingBookingLinks(prev => ({ ...prev, [cacheKey]: true }));
+
+    try {
+      const response = await axios.post(`${config.API_URL}/api/booking/hotel`, {
+        name: hotelName,
+        location
+      });
+
+      if (response.data.success || response.data.bookingUrl) {
+        setHotelBookingLinks(prev => ({
+          ...prev,
+          [cacheKey]: response.data.bookingUrl
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching hotel booking link:', error);
+      // Set a fallback Booking.com search URL
+      setHotelBookingLinks(prev => ({
+        ...prev,
+        [cacheKey]: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${hotelName} ${location}`)}`
+      }));
+    } finally {
+      setLoadingBookingLinks(prev => ({ ...prev, [cacheKey]: false }));
+    }
+  };
+
+  // Fetch booking link for a restaurant
+  const fetchRestaurantBookingLink = async (restaurantName, location) => {
+    const cacheKey = `${restaurantName}-${location}`;
+    
+    // Check if already loaded or loading
+    if (restaurantBookingLinks[cacheKey] || loadingBookingLinks[cacheKey]) {
+      return;
+    }
+
+    setLoadingBookingLinks(prev => ({ ...prev, [cacheKey]: true }));
+
+    try {
+      const response = await axios.post(`${config.API_URL}/api/booking/restaurant`, {
+        name: restaurantName,
+        location
+      });
+
+      if (response.data.success || response.data.bookingUrl) {
+        setRestaurantBookingLinks(prev => ({
+          ...prev,
+          [cacheKey]: response.data.bookingUrl
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching restaurant booking link:', error);
+      // Set a fallback TripAdvisor search URL
+      setRestaurantBookingLinks(prev => ({
+        ...prev,
+        [cacheKey]: `https://www.tripadvisor.com/Search?q=${encodeURIComponent(`${restaurantName} ${location}`)}`
+      }));
+    } finally {
+      setLoadingBookingLinks(prev => ({ ...prev, [cacheKey]: false }));
+    }
+  };
+
+  // Helper to get booking link for hotel
+  const getHotelBookingLink = (hotelName) => {
+    if (!tripData?.destination) return null;
+    const cacheKey = `${hotelName}-${tripData.destination}`;
+    return hotelBookingLinks[cacheKey];
+  };
+
+  // Helper to get booking link for restaurant
+  const getRestaurantBookingLink = (restaurantName) => {
+    if (!tripData?.destination) return null;
+    const cacheKey = `${restaurantName}-${tripData.destination}`;
+    return restaurantBookingLinks[cacheKey];
+  };
+
+  // Check if loading booking link
+  const isLoadingBookingLink = (name) => {
+    if (!tripData?.destination) return false;
+    const cacheKey = `${name}-${tripData.destination}`;
+    return loadingBookingLinks[cacheKey];
   };
 
   // Handle PDF download
@@ -990,28 +1084,41 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
                                         <span>📍 {day.accommodation.address.split(',')[0]}</span>
                                       )}
                                     </div>
-                                    {day.accommodation.googleMapsUrl && (
-                                      <a 
-                                        href={day.accommodation.googleMapsUrl} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="activity-place-link"
-                                      >
-                                        {t.viewOnMap}
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              ) : (
-                                /* Simple text description */
-                                <p className="activity-title">{day.accommodation}</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                                                {day.accommodation.googleMapsUrl && (
+                                                      <a 
+                                                        href={day.accommodation.googleMapsUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="activity-place-link"
+                                                      >
+                                                        {t.viewOnMap}
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                        </svg>
+                                                      </a>
+                                                    )}
+                                                    {/* Booking.com button for accommodation */}
+                                                    <a 
+                                                      href={getHotelBookingLink(day.accommodation.name) || `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${day.accommodation.name} ${tripData.destination}`)}`}
+                                                      target="_blank" 
+                                                      rel="noopener noreferrer"
+                                                      className="activity-place-link booking-link"
+                                                      onMouseEnter={() => fetchHotelBookingLink(day.accommodation.name, tripData.destination)}
+                                                    >
+                                                      {t.bookOnBooking}
+                                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                      </svg>
+                                                    </a>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                /* Simple text description */
+                                                <p className="activity-title">{day.accommodation}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
                         
                         {/* Dining */}
                         {day.dining && (
@@ -1068,28 +1175,41 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
                                         <span>📍 {day.dining.address.split(',')[0]}</span>
                                       )}
                                     </div>
-                                    {day.dining.googleMapsUrl && (
-                                      <a 
-                                        href={day.dining.googleMapsUrl} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="activity-place-link"
-                                      >
-                                        {t.viewOnMap}
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              ) : (
-                                /* Simple text description */
-                                <p className="activity-title">{day.dining}</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                                                {day.dining.googleMapsUrl && (
+                                                      <a 
+                                                        href={day.dining.googleMapsUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="activity-place-link"
+                                                      >
+                                                        {t.viewOnMap}
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                        </svg>
+                                                      </a>
+                                                    )}
+                                                    {/* Restaurant reservation button */}
+                                                    <a 
+                                                      href={getRestaurantBookingLink(day.dining.name) || `https://www.tripadvisor.com/Search?q=${encodeURIComponent(`${day.dining.name} ${tripData.destination}`)}`}
+                                                      target="_blank" 
+                                                      rel="noopener noreferrer"
+                                                      className="activity-place-link restaurant-link"
+                                                      onMouseEnter={() => fetchRestaurantBookingLink(day.dining.name, tripData.destination)}
+                                                    >
+                                                      {t.bookRestaurant}
+                                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                      </svg>
+                                                    </a>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                /* Simple text description */
+                                                <p className="activity-title">{day.dining}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
                       </div>
                     )}
                   </div>
@@ -1113,7 +1233,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
             {hotels.length > 0 ? (
               <div className="hotels-grid">
                 {hotels.map((hotel, index) => (
-                  <div key={hotel.id || index} className="hotel-card">
+                  <div key={hotel.id || index} className="hotel-card" onMouseEnter={() => fetchHotelBookingLink(hotel.name, tripData.destination)}>
                     {hotel.images && hotel.images.length > 0 && hotel.images[0] ? (
                       <div className="hotel-image">
                         <img src={hotel.images[0]} alt={hotel.name} loading="lazy" />
@@ -1150,6 +1270,22 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
                         </a>
+                        {/* Booking.com Button */}
+                        <a 
+                          href={getHotelBookingLink(hotel.name) || `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${hotel.name} ${tripData.destination}`)}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="hotel-action-btn booking-btn"
+                          onClick={() => !getHotelBookingLink(hotel.name) && fetchHotelBookingLink(hotel.name, tripData.destination)}
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="booking-icon">
+                            <path d="M2 6a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm4 2v8h3a4 4 0 100-8H6zm2 2h1a2 2 0 110 4H8v-4zm8-2v8h2v-3h1l2 3h2.5l-2.5-3.5A2.5 2.5 0 0018 8h-4zm2 2h2a.5.5 0 010 1h-2v-1z"/>
+                          </svg>
+                          <span>{isLoadingBookingLink(hotel.name) ? t.loadingBooking : t.bookOnBooking}</span>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -1173,7 +1309,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
             {restaurants.length > 0 ? (
               <div className="hotels-grid">
                 {restaurants.map((restaurant, index) => (
-                  <div key={restaurant.id || index} className="hotel-card">
+                  <div key={restaurant.id || index} className="hotel-card" onMouseEnter={() => fetchRestaurantBookingLink(restaurant.name, tripData.destination)}>
                     {restaurant.images && restaurant.images.length > 0 && restaurant.images[0] ? (
                       <div className="hotel-image">
                         <img src={restaurant.images[0]} alt={restaurant.name} loading="lazy" />
@@ -1207,6 +1343,22 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           <span>{t.viewOnMap}</span>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                        {/* Restaurant Reservation Button */}
+                        <a 
+                          href={getRestaurantBookingLink(restaurant.name) || `https://www.tripadvisor.com/Search?q=${encodeURIComponent(`${restaurant.name} ${tripData.destination}`)}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="hotel-action-btn restaurant-booking-btn"
+                          onClick={() => !getRestaurantBookingLink(restaurant.name) && fetchRestaurantBookingLink(restaurant.name, tripData.destination)}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>{isLoadingBookingLink(restaurant.name) ? t.loadingBooking : t.bookRestaurant}</span>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
