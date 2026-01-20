@@ -2,7 +2,7 @@
 
 .chat-main-container {
   width: 100%;
-  height: calc(100vh - 65px);
+  height: 100%;
   display: flex;
   gap: 0;
   position: relative;
@@ -205,13 +205,13 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  margin-left: 280px;
+  margin-left: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Adjust chat box when sidebar is collapsed */
+/* Chat box no longer needs margin adjustment - sidebar is now floating */
 body:has(.chat-history.collapsed) .chat-box {
-  margin-left: 50px;
+  margin-left: 0;
 }
 
 /* Messages Area */
@@ -400,6 +400,15 @@ body:has(.chat-history.collapsed) .chat-box {
 .input-wrapper {
   position: relative;
   margin-bottom: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+/* Textarea container for positioning send button */
+.input-wrapper .textarea-container {
+  position: relative;
+  flex: 1;
 }
 
 .message-input {
@@ -721,17 +730,17 @@ body:has(.chat-history:not(.collapsed)) .trip-panel-container {
 /* Responsive Design */
 @media (max-width: 1024px) {
   .chat-box {
-    margin-left: 280px;
+    margin-left: 0;
   }
-  
+
   body:has(.chat-history.collapsed) .chat-box {
-    margin-left: 50px;
+    margin-left: 0;
   }
-  
+
   .trip-panel-container {
     width: 45%;
   }
-  
+
   .messages-area {
     padding: 1.5rem;
   }
@@ -776,7 +785,7 @@ body:has(.chat-history:not(.collapsed)) .trip-panel-container {
   }
 
   .messages-area {
-    padding: 1.25rem 1.25rem 120px 1.25rem;
+    padding: 1.25rem 1.25rem 140px 1.25rem;
   }
 
   .suggestion-cards {
@@ -803,6 +812,10 @@ body:has(.chat-history:not(.collapsed)) .trip-panel-container {
   .send-button {
     right: 0.5rem;
     bottom: 0.5rem;
+  }
+
+  .input-wrapper {
+    gap: 8px;
   }
 
   .input-footer {

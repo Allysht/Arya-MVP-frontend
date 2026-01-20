@@ -1,0 +1,285 @@
+/* Trip Readiness Bar - Horizontal Bar Design */
+
+.trip-readiness-bar {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-bottom: 1px solid #e5e5e5;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Rainbow border animation for extraction state */
+.trip-readiness-bar.extracting {
+  border-bottom: none;
+}
+
+.trip-readiness-bar.extracting::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: 0;
+  background: linear-gradient(
+    90deg,
+    #fbbf24 0%,
+    #f59e0b 15%,
+    #d97706 25%,
+    #a855f7 40%,
+    #9333ea 50%,
+    #7c3aed 60%,
+    #d97706 75%,
+    #f59e0b 85%,
+    #fbbf24 100%
+  );
+  background-size: 200% 100%;
+  animation: rainbowSlide 2s linear infinite;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes rainbowSlide {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* Subtle glow effect during extraction */
+.trip-readiness-bar.extracting {
+  box-shadow:
+    0 0 20px rgba(168, 85, 247, 0.15),
+    0 0 40px rgba(251, 191, 36, 0.1);
+}
+
+.trip-readiness-bar:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f0f0 100%);
+}
+
+.trip-readiness-bar.complete {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  border-bottom-color: #000;
+}
+
+.trip-readiness-bar.complete:hover {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+}
+
+.trip-readiness-bar.complete .trip-readiness-title,
+.trip-readiness-bar.complete .trip-readiness-status,
+.trip-readiness-bar.complete .trip-readiness-percentage,
+.trip-readiness-bar.complete .action-text,
+.trip-readiness-bar.complete .slot-label {
+  color: #ffffff;
+}
+
+.trip-readiness-bar.complete .trip-readiness-slot.filled .slot-icon {
+  color: #4ade80;
+}
+
+.trip-readiness-bar.complete .trip-readiness-slot.empty .slot-icon {
+  color: #666;
+}
+
+.trip-readiness-bar.complete .trip-readiness-progress-bar {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.trip-readiness-bar.complete .trip-readiness-progress-fill {
+  background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+}
+
+.trip-readiness-bar.complete .action-arrow {
+  color: #ffffff;
+}
+
+.trip-readiness-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.trip-readiness-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+
+.trip-readiness-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.trip-readiness-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.trip-readiness-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #000;
+  letter-spacing: -0.3px;
+}
+
+.trip-readiness-status {
+  font-size: 11px;
+  color: #666;
+}
+
+.trip-readiness-progress-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 100px;
+}
+
+.trip-readiness-percentage {
+  font-weight: 800;
+  font-size: 16px;
+  color: #000;
+  min-width: 40px;
+}
+
+.trip-readiness-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #e5e5e5;
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 50px;
+}
+
+.trip-readiness-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #000 0%, #333 100%);
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trip-readiness-slots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.trip-readiness-slot {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.trip-readiness-slot.filled {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.trip-readiness-slot.empty {
+  background: transparent;
+  border: 1px dashed #ccc;
+}
+
+.slot-icon {
+  font-size: 9px;
+}
+
+.trip-readiness-slot.filled .slot-icon {
+  color: #22c55e;
+}
+
+.trip-readiness-slot.empty .slot-icon {
+  color: #999;
+}
+
+.slot-label {
+  color: #333;
+  text-transform: capitalize;
+}
+
+.trip-readiness-slot.empty .slot-label {
+  color: #999;
+}
+
+.trip-readiness-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.action-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+}
+
+.action-arrow {
+  width: 14px;
+  height: 14px;
+  color: #666;
+  transition: transform 0.2s;
+}
+
+.trip-readiness-bar:hover .action-arrow {
+  transform: translateX(3px);
+}
+
+/* Complete state slot styling */
+.trip-readiness-bar.complete .trip-readiness-slot.filled {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.trip-readiness-bar.complete .trip-readiness-slot.empty {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.trip-readiness-bar.complete .slot-label {
+  color: #fff;
+}
+
+.trip-readiness-bar.complete .trip-readiness-slot.empty .slot-label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .trip-readiness-bar {
+    padding: 10px 16px;
+  }
+
+  .trip-readiness-content {
+    gap: 12px;
+  }
+
+  .trip-readiness-slots {
+    display: none;
+  }
+
+  .trip-readiness-info {
+    min-width: auto;
+  }
+
+  .trip-readiness-progress-section {
+    flex: 1;
+    min-width: auto;
+  }
+
+  .trip-readiness-action {
+    display: none;
+  }
+}

@@ -157,6 +157,19 @@
   transform: translateY(0);
 }
 
+/* Rich Components Container */
+.rich-components {
+  margin-top: 0.75rem;
+}
+
+/* Action Buttons Container */
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 /* Message Timestamp */
 .message-timestamp {
   margin-top: 0.625rem;

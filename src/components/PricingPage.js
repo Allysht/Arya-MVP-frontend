@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser, SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import './PricingPage.css';
 
@@ -8,7 +8,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function PricingPage() {
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState(null);
   const [error, setError] = useState(null);
@@ -32,17 +32,12 @@ function PricingPage() {
   const handleSubscribe = async (plan) => {
     if (!isLoaded || !user) {
       setError('Please sign in first');
-      navigate('/sign-in');
+      navigate('/auth', { state: { from: { pathname: '/pricing' } } });
       return;
     }
 
-    if (!plans) {
-      setError('Plans are still loading. Please wait a moment and try again.');
-      return;
-    }
+    const email = user.email;
 
-    const email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress;
-    
     if (!email) {
       setError('Unable to get your email address. Please try signing in again.');
       return;
@@ -52,27 +47,8 @@ function PricingPage() {
     setError(null);
 
     try {
-      const priceId = plan === 'monthly' 
-        ? plans.monthly.priceId 
-        : plans.yearly.priceId;
-
-      if (!priceId) {
-        setError('Price ID not configured. Please contact support.');
-        console.error('Missing price ID for plan:', plan, 'Plans:', plans);
-        setLoading(false);
-        return;
-      }
-
-      console.log('Creating checkout session:', {
-        plan,
-        priceId,
-        userId: user.id,
-        email
-      });
-
       const response = await axios.post(`${API_URL}/api/subscription/create-checkout-session`, {
-        priceId,
-        clerkUserId: user.id,
+        firebaseUid: user.uid,
         email,
         plan
       });
@@ -92,6 +68,15 @@ function PricingPage() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   return (
     <div className="pricing-page">
       {/* Header matching Landing Page */}
@@ -103,17 +88,23 @@ function PricingPage() {
               <span className="logo-badge">AI Travel</span>
             </div>
             <nav className="nav-menu">
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="sign-in-button">Sign In</button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <button className="cta-button" onClick={() => navigate('/app')}>
-                  Go to App
+              {!user ? (
+                <button className="sign-in-button" onClick={() => navigate('/auth')}>
+                  Sign In
                 </button>
-                <UserButton afterSignOutUrl="/" />
-              </SignedIn>
+              ) : (
+                <>
+                  <button className="cta-button" onClick={() => navigate('/app')}>
+                    Go to App
+                  </button>
+                  <div className="user-menu">
+                    <span className="user-email">{user.displayName || user.email}</span>
+                    <button className="sign-out-button" onClick={handleSignOut}>
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              )}
             </nav>
           </div>
         </div>
@@ -154,10 +145,10 @@ function PricingPage() {
               <li>✓ Weather forecasts</li>
               <li>✓ PDF export</li>
             </ul>
-            <button 
+            <button
               className="subscribe-button"
               onClick={() => handleSubscribe('monthly')}
-              disabled={loading || !plans}
+              disabled={loading}
             >
               {loading ? 'Processing...' : 'Subscribe Monthly'}
             </button>
@@ -183,10 +174,10 @@ function PricingPage() {
               <li>✓ Unlimited saved itineraries</li>
               <li>✓ Best value for money</li>
             </ul>
-            <button 
+            <button
               className="subscribe-button featured"
               onClick={() => handleSubscribe('yearly')}
-              disabled={loading || !plans}
+              disabled={loading}
             >
               {loading ? 'Processing...' : 'Subscribe Yearly'}
             </button>
@@ -210,4 +201,3 @@ function PricingPage() {
 }
 
 export default PricingPage;
-

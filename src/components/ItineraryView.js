@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@clerk/clerk-react';
 import { itineraryAPI } from '../services/chatService';
 import axios from 'axios';
 import config from '../config';
+import { IoLocationSharp, IoCalendar, IoMoon, IoTimer, IoBed, IoRestaurant } from 'react-icons/io5';
 import './ItineraryView.css';
 
 // Translation helper for booking buttons
@@ -17,7 +17,6 @@ const translations = {
 const ItineraryView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getToken } = useAuth();
   const [itinerary, setItinerary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,14 +36,14 @@ const ItineraryView = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await itineraryAPI.getItinerary(id, getToken);
+      const data = await itineraryAPI.getItinerary(id);
       setItinerary(data?.itinerary || null);
-      
+
       // Fetch destination images
       if (data?.itinerary?.destination) {
         fetchDestinationImages(data.itinerary.destination);
       }
-      
+
       console.log('✅ Loaded itinerary:', data?.itinerary);
     } catch (err) {
       console.error('Failed to load itinerary:', err);
@@ -136,7 +135,7 @@ const ItineraryView = () => {
     }
 
     try {
-      await itineraryAPI.deleteItinerary(id, getToken);
+      await itineraryAPI.deleteItinerary(id);
       console.log('✅ Deleted itinerary:', id);
       navigate('/itineraries');
     } catch (err) {
@@ -260,19 +259,19 @@ const ItineraryView = () => {
 
           {/* Trip Header */}
           <div className="trip-header">
-            <div className="trip-badge">📍 {itinerary.destination}</div>
+            <div className="trip-badge"><IoLocationSharp className="icon-purple-glow" /> {itinerary.destination}</div>
             <h1 className="trip-main-title">{itinerary.title || `Trip to ${itinerary.destination}`}</h1>
             {itinerary.description && <p className="trip-desc">{itinerary.description}</p>}
             
             <div className="trip-meta">
               {itinerary.startDate && (
                 <span className="meta-item">
-                  📅 {formatDate(itinerary.startDate)}
+                  <IoCalendar className="icon-purple-glow" /> {formatDate(itinerary.startDate)}
                   {itinerary.endDate && ` - ${formatDate(itinerary.endDate)}`}
                 </span>
               )}
               {itinerary.summary?.totalDays && (
-                <span className="meta-item">🌙 {itinerary.summary.totalDays} days</span>
+                <span className="meta-item"><IoMoon className="icon-purple-glow" /> {itinerary.summary.totalDays} days</span>
               )}
             </div>
 
@@ -311,7 +310,7 @@ const ItineraryView = () => {
                               <p className="activity-desc">{activity.description}</p>
                             )}
                             {activity.duration && (
-                              <span className="activity-duration">⏱️ {activity.duration}</span>
+                              <span className="activity-duration"><IoTimer className="icon-purple-glow" /> {activity.duration}</span>
                             )}
                           </div>
                         ))}
@@ -322,7 +321,7 @@ const ItineraryView = () => {
                   {/* Accommodation */}
                   {day.accommodation && (
                     <div className="place-section">
-                      <h4 className="section-title">🏨 Accommodation</h4>
+                      <h4 className="section-title"><IoBed className="icon-purple-glow" /> Accommodation</h4>
                       {typeof day.accommodation === 'object' && day.accommodation.name ? (
                         <div className="place-card">
                           {day.accommodation.images && day.accommodation.images.length > 0 && (
@@ -350,7 +349,7 @@ const ItineraryView = () => {
                                 </span>
                               )}
                               {day.accommodation.address && (
-                                <span className="place-address">📍 {day.accommodation.address.split(',')[0]}</span>
+                                <span className="place-address"><IoLocationSharp className="icon-purple-glow" /> {day.accommodation.address.split(',')[0]}</span>
                               )}
                             </div>
                             {day.accommodation.googleMapsUrl && (
@@ -384,7 +383,7 @@ const ItineraryView = () => {
                   {/* Dining */}
                   {day.dining && (
                     <div className="place-section">
-                      <h4 className="section-title">🍽️ Dining</h4>
+                      <h4 className="section-title"><IoRestaurant className="icon-purple-glow" /> Dining</h4>
                       {typeof day.dining === 'object' && day.dining.name ? (
                         <div className="place-card">
                           {day.dining.images && day.dining.images.length > 0 && (
@@ -412,7 +411,7 @@ const ItineraryView = () => {
                                 </span>
                               )}
                               {day.dining.address && (
-                                <span className="place-address">📍 {day.dining.address.split(',')[0]}</span>
+                                <span className="place-address"><IoLocationSharp className="icon-purple-glow" /> {day.dining.address.split(',')[0]}</span>
                               )}
                             </div>
                             {day.dining.googleMapsUrl && (

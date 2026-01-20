@@ -1,23 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, UserButton } from '@clerk/clerk-react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { IoPerson } from 'react-icons/io5';
 import Chat from './components/Chat';
 import ChatHistory from './components/ChatHistory';
 import Preferences from './components/Preferences';
 import LandingPage from './components/LandingPage';
 import ItinerariesPage from './components/ItinerariesPage';
 import ItineraryView from './components/ItineraryView';
-import PricingPage from './components/PricingPage';
-import SubscriptionRequired from './components/SubscriptionRequired';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import CookiePolicy from './components/CookiePolicy';
-import { useSubscription } from './hooks/useSubscription';
+import AuthPage from './components/AuthPage';
+import PricingPage from './components/PricingPage';
+import AffiliatePage from './components/AffiliatePage';
+import SubscriptionProtectedRoute from './components/SubscriptionProtectedRoute';
 import './App.css';
 import { useTranslations } from './translations';
-
-// Import Clerk publishable key
-const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 
 function ChatApp() {
   const [showPreferences, setShowPreferences] = useState(false);
@@ -26,26 +25,14 @@ function ChatApp() {
   const [refreshHistory, setRefreshHistory] = useState(0);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const t = useTranslations(userPreferences?.language || 'en');
   const navigate = useNavigate();
   const languageDropdownRef = useRef(null);
   const currencyDropdownRef = useRef(null);
-  
-  // Check subscription status
-  const { loading: subLoading, hasSubscription } = useSubscription();
-  
-  useEffect(() => {
-    // Check for successful subscription
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success') === 'true') {
-      // Clear the URL params
-      window.history.replaceState({}, '', '/app');
-      // Show success message or reload subscription status
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    }
-  }, []);
+  const userMenuRef = useRef(null);
+  const { user, logout } = useAuth();
 
   // Language and currency options
   const LANGUAGES = [
@@ -93,6 +80,9 @@ function ChatApp() {
       }
       if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(event.target)) {
         setShowCurrencyDropdown(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -144,7 +134,7 @@ function ChatApp() {
   const handleChatCreated = (chatId) => {
     setCurrentChatId(chatId);
     setRefreshHistory(prev => prev + 1); // Trigger history refresh
-    
+
     // Also trigger immediate refresh of chat history
     setTimeout(() => {
       if (window.refreshChatHistory) {
@@ -153,140 +143,148 @@ function ChatApp() {
     }, 500); // Small delay to ensure backend has saved
   };
 
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   return (
-    <div className="App app-with-sidebar">
-      {/* Chat History Sidebar */}
-      <ChatHistory 
-        onSelectChat={handleSelectChat}
-        onNewChat={handleNewChat}
-        currentChatId={currentChatId}
-        key={refreshHistory}
-      />
-      
-      <div className="app-main-container">
-        <header className="app-header">
-          <div className="header-content">
+    <div className="App">
+      {/* Compact Static Header - at the very top */}
+      <header className="app-header">
+        <div className="header-content">
+          <div className="header-left">
+            {/* Chat History Toggle */}
+            <button
+              className="header-btn header-btn-icon"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              title={isSidebarOpen ? "Hide chat history" : "Show chat history"}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+            {/* New Chat Button */}
+            <button
+              className="header-btn header-btn-icon"
+              onClick={handleNewChat}
+              title="New chat"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
             <div className="header-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
               <h1 className="app-title">ARYA</h1>
             </div>
-            <div className="header-actions">
-              <button 
-                className="header-btn header-btn-trips" 
-                onClick={() => navigate('/itineraries')}
-                title="My Trips"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
-                My Trips
-              </button>
-
-              {/* Preferences Controls */}
-              <div className="header-preferences">
-                {/* Language Selector */}
-                <div className="preference-dropdown" ref={languageDropdownRef}>
-                  <button 
-                    className="preference-btn" 
-                    onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                    title="Language"
-                  >
-                    <span className="preference-icon">{getCurrentLanguage().flag}</span>
-                    <span className="preference-label">{getCurrentLanguage().code.toUpperCase()}</span>
-                    <svg className="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 4.5 6 7.5 9 4.5"></polyline>
-                    </svg>
-                  </button>
-                  {showLanguageDropdown && (
-                    <div className="preference-dropdown-menu">
-                      {LANGUAGES.map(lang => (
-                        <button
-                          key={lang.code}
-                          className={`dropdown-item ${getCurrentLanguage().code === lang.code ? 'active' : ''}`}
-                          onClick={() => updateLanguage(lang.code)}
-                        >
-                          <span className="item-icon">{lang.flag}</span>
-                          <span className="item-name">{lang.name}</span>
-                          {getCurrentLanguage().code === lang.code && (
-                            <svg className="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Currency Selector */}
-                <div className="preference-dropdown" ref={currencyDropdownRef}>
-                  <button 
-                    className="preference-btn" 
-                    onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                    title="Currency"
-                  >
-                    <span className="preference-icon">{getCurrentCurrency().symbol}</span>
-                    <span className="preference-label">{getCurrentCurrency().code}</span>
-                    <svg className="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 4.5 6 7.5 9 4.5"></polyline>
-                    </svg>
-                  </button>
-                  {showCurrencyDropdown && (
-                    <div className="preference-dropdown-menu">
-                      {CURRENCIES.map(curr => (
-                        <button
-                          key={curr.code}
-                          className={`dropdown-item ${getCurrentCurrency().code === curr.code ? 'active' : ''}`}
-                          onClick={() => updateCurrency(curr.code)}
-                        >
-                          <span className="item-icon">{curr.symbol}</span>
-                          <span className="item-name">{curr.name}</span>
-                          {getCurrentCurrency().code === curr.code && (
-                            <svg className="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Temperature Toggle */}
-                <button 
-                  className="preference-btn temperature-toggle" 
-                  onClick={toggleTemperature}
-                  title="Temperature Unit"
-                >
-                  <span className="preference-icon">🌡️</span>
-                  <span className="preference-label">°{userPreferences?.temperatureUnit || 'C'}</span>
-                </button>
-              </div>
-
-              {/* User Profile Button */}
-              <div className="user-profile-section">
-                <UserButton 
-                  afterSignOutUrl="/"
-                  appearance={{
-                    elements: {
-                      avatarBox: "width: 40px; height: 40px;"
-                    }
-                  }}
-                />
-              </div>
-            </div>
           </div>
-        </header>
-        <main className="app-main">
-          <Chat 
-            userPreferences={userPreferences} 
-            onChatCreated={handleChatCreated}
-          />
-        </main>
+          <div className="header-actions">
+            <button
+              className="header-btn header-btn-trips"
+              onClick={() => navigate('/itineraries')}
+              title="My Trips"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              <span className="btn-label">My Trips</span>
+            </button>
+
+            {/* Language Selector */}
+            <div className="preference-dropdown" ref={languageDropdownRef}>
+              <button
+                className="header-btn"
+                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                title="Language"
+              >
+                <span className="preference-icon">{getCurrentLanguage().flag}</span>
+                <span className="btn-label">{getCurrentLanguage().code.toUpperCase()}</span>
+              </button>
+              {showLanguageDropdown && (
+                <div className="preference-dropdown-menu">
+                  {LANGUAGES.map(lang => (
+                    <button
+                      key={lang.code}
+                      className={`dropdown-item ${getCurrentLanguage().code === lang.code ? 'active' : ''}`}
+                      onClick={() => updateLanguage(lang.code)}
+                    >
+                      <span className="item-icon">{lang.flag}</span>
+                      <span className="item-name">{lang.name}</span>
+                      {getCurrentLanguage().code === lang.code && (
+                        <svg className="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* User Menu */}
+            {user && (
+              <div className="user-dropdown" ref={userMenuRef}>
+                <button
+                  className="header-btn user-btn"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  title="Account"
+                >
+                  <div className="user-avatar">
+                    <IoPerson className="user-avatar-icon" />
+                  </div>
+                </button>
+                {showUserMenu && (
+                  <div className="user-dropdown-menu">
+                    <div className="user-info">
+                      <p className="user-name">{user.displayName || 'User'}</p>
+                      <p className="user-email">{user.email}</p>
+                    </div>
+                    <div className="dropdown-divider"></div>
+                    <button className="dropdown-item" onClick={handleSignOut}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main content area with sidebar */}
+      <div className="app-body">
+        {/* Chat History Sidebar */}
+        <ChatHistory
+          onSelectChat={handleSelectChat}
+          onNewChat={handleNewChat}
+          currentChatId={currentChatId}
+          key={refreshHistory}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+
+        <div className="app-main-container">
+          <main className="app-main">
+            <Chat
+              userPreferences={userPreferences}
+              onChatCreated={handleChatCreated}
+            />
+          </main>
+        </div>
       </div>
 
       {/* Preferences Modal */}
-      <Preferences 
+      <Preferences
         isOpen={showPreferences}
         onClose={() => setShowPreferences(false)}
         onSave={handlePreferencesSave}
@@ -295,136 +293,38 @@ function ChatApp() {
   );
 }
 
-// Protected Chat App Route with Subscription Check
-function ProtectedChatApp() {
-  const { loading, hasSubscription } = useSubscription();
-
-  return (
-    <>
-      <SignedIn>
-        {loading ? (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            fontSize: '20px'
-          }}>
-            Loading...
-          </div>
-        ) : hasSubscription ? (
-          <ChatApp />
-        ) : (
-          <SubscriptionRequired />
-        )}
-      </SignedIn>
-      <SignedOut>
-        <RedirectToSignIn />
-      </SignedOut>
-    </>
-  );
-}
-
-// Protected Itineraries Page with Subscription Check
-function ProtectedItineraries() {
-  const { loading, hasSubscription } = useSubscription();
-
-  return (
-    <>
-      <SignedIn>
-        {loading ? (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            fontSize: '20px'
-          }}>
-            Loading...
-          </div>
-        ) : hasSubscription ? (
-          <ItinerariesPage />
-        ) : (
-          <SubscriptionRequired />
-        )}
-      </SignedIn>
-      <SignedOut>
-        <RedirectToSignIn />
-      </SignedOut>
-    </>
-  );
-}
-
-// Protected Itinerary View with Subscription Check
-function ProtectedItineraryView() {
-  const { loading, hasSubscription } = useSubscription();
-
-  return (
-    <>
-      <SignedIn>
-        {loading ? (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            fontSize: '20px'
-          }}>
-            Loading...
-          </div>
-        ) : hasSubscription ? (
-          <ItineraryView />
-        ) : (
-          <SubscriptionRequired />
-        )}
-      </SignedIn>
-      <SignedOut>
-        <RedirectToSignIn />
-      </SignedOut>
-    </>
-  );
-}
-
 function App() {
-  if (!clerkPubKey) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h2>Missing Clerk Publishable Key</h2>
-        <p>Please add your Clerk publishable key to the .env file:</p>
-        <code>REACT_APP_CLERK_PUBLISHABLE_KEY=your_key_here</code>
-        <p style={{ marginTop: '20px' }}>
-          Get your key from:{' '}
-          <a href="https://dashboard.clerk.com" target="_blank" rel="noopener noreferrer">
-            https://dashboard.clerk.com
-          </a>
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <ClerkProvider publishableKey={clerkPubKey}>
+    <AuthProvider>
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/auth" element={<AuthPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/affiliate" element={<AffiliatePage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
-          <Route path="/app" element={<ProtectedChatApp />} />
-          <Route path="/itineraries" element={<ProtectedItineraries />} />
-          <Route path="/itineraries/:id" element={<ProtectedItineraryView />} />
+          <Route path="/chat" element={<Navigate to="/app" replace />} />
+          <Route path="/app" element={
+            <SubscriptionProtectedRoute>
+              <ChatApp />
+            </SubscriptionProtectedRoute>
+          } />
+          <Route path="/itineraries" element={
+            <SubscriptionProtectedRoute>
+              <ItinerariesPage />
+            </SubscriptionProtectedRoute>
+          } />
+          <Route path="/itineraries/:id" element={
+            <SubscriptionProtectedRoute>
+              <ItineraryView />
+            </SubscriptionProtectedRoute>
+          } />
         </Routes>
       </Router>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }
 
 export default App;
-

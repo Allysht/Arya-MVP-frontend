@@ -1,0 +1,200 @@
+/* Affiliate Page - Matching Auth Page Design */
+.affiliate-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: #fafafa;
+  position: relative;
+  overflow: hidden;
+  padding: 40px 20px;
+}
+
+/* Animated Background Shapes */
+.affiliate-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.affiliate-bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.6;
+  filter: blur(80px);
+}
+
+.affiliate-bg-shape-1 {
+  width: 600px;
+  height: 600px;
+  background: linear-gradient(135deg, #e0e0e0 0%, #d0d0d0 100%);
+  top: -200px;
+  right: -100px;
+  animation: affiliateFloat 20s ease-in-out infinite;
+}
+
+.affiliate-bg-shape-2 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #f0f0f0 0%, #e5e5e5 100%);
+  bottom: -100px;
+  left: -100px;
+  animation: affiliateFloat 15s ease-in-out infinite reverse;
+}
+
+@keyframes affiliateFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-30px) scale(1.05);
+  }
+}
+
+/* Container */
+.affiliate-container {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Back Button */
+.affiliate-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+
+.affiliate-back-btn:hover {
+  border-color: #000;
+  background: #fafafa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Header */
+.affiliate-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.affiliate-title {
+  font-size: 36px;
+  font-weight: 900;
+  color: #000;
+  margin: 0 0 12px 0;
+  letter-spacing: -1.5px;
+}
+
+.affiliate-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+  line-height: 1.6;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Benefits Section */
+.affiliate-benefits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.benefit-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e5e5;
+  transition: all 0.2s;
+}
+
+.benefit-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: #d0d0d0;
+}
+
+.benefit-icon {
+  width: 48px;
+  height: 48px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.benefit-icon svg {
+  stroke: #000;
+}
+
+.benefit-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  margin: 0 0 8px 0;
+}
+
+.benefit-card p {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Widget Container */
+.affiliate-widget-container {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e5e5;
+  min-height: 400px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .affiliate-page {
+    padding: 20px 16px;
+  }
+
+  .affiliate-title {
+    font-size: 28px;
+  }
+
+  .affiliate-subtitle {
+    font-size: 14px;
+  }
+
+  .affiliate-benefits {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .benefit-card {
+    padding: 20px;
+  }
+
+  .affiliate-widget-container {
+    padding: 24px;
+    border-radius: 20px;
+  }
+}

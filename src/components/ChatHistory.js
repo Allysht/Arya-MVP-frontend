@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/clerk-react';
 import { chatAPI } from '../services/chatService';
 import './ChatHistory.css';
 
-const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
+const ChatHistory = ({ onSelectChat, onNewChat, currentChatId, isOpen, onClose }) => {
   const [chats, setChats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const { getToken } = useAuth();
 
   useEffect(() => {
     loadChats();
@@ -25,7 +22,7 @@ const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
   const loadChats = async () => {
     try {
       setIsLoading(true);
-      const result = await chatAPI.getChats(getToken);
+      const result = await chatAPI.getChats();
       setChats(result.chats || []);
     } catch (error) {
       console.error('Failed to load chats:', error);
@@ -41,9 +38,9 @@ const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
     }
 
     try {
-      await chatAPI.deleteChat(chatId, getToken);
+      await chatAPI.deleteChat(chatId);
       setChats(chats.filter(chat => chat.id !== chatId));
-      
+
       // If deleted current chat, create new one
       if (chatId === currentChatId) {
         onNewChat();
@@ -66,24 +63,13 @@ const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
-    
+
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  if (isCollapsed) {
-    return (
-      <div className="chat-history collapsed">
-        <button 
-          className="expand-button"
-          onClick={() => setIsCollapsed(false)}
-          title="Show chat history"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 18l6-6-6-6"/>
-          </svg>
-        </button>
-      </div>
-    );
+  // Don't render anything if sidebar is closed
+  if (!isOpen) {
+    return null;
   }
 
   return (
@@ -91,7 +77,7 @@ const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
       <div className="chat-history-header">
         <h3>Chat History</h3>
         <div className="header-actions">
-          <button 
+          <button
             className="new-chat-button"
             onClick={onNewChat}
             title="New chat"
@@ -100,9 +86,9 @@ const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
               <path d="M12 5v14M5 12h14"/>
             </svg>
           </button>
-          <button 
+          <button
             className="collapse-button"
-            onClick={() => setIsCollapsed(true)}
+            onClick={onClose}
             title="Hide sidebar"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -157,7 +143,7 @@ const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
         )}
       </div>
 
-      <button 
+      <button
         className="refresh-button"
         onClick={loadChats}
         title="Refresh chat list"
@@ -172,4 +158,3 @@ const ChatHistory = ({ onSelectChat, onNewChat, currentChatId }) => {
 };
 
 export default ChatHistory;
-

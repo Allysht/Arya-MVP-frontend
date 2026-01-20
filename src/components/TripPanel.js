@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './TripPanel.css';
-import pdfGenerator from '../utils/pdfGenerator';
 import config from '../config';
 import { useTranslations } from '../translations';
 
 const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPreferences }) => {
   const t = useTranslations(userPreferences?.language || 'en');
-  const [expandedDays, setExpandedDays] = useState({});
   const [activeTab, setActiveTab] = useState('overview');
   const [destinationImages, setDestinationImages] = useState([]);
   const [imageCache, setImageCache] = useState({});
@@ -437,12 +435,6 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
     calculatePrice();
   }, [tripData, hotels, restaurants, userPreferences?.currency]);
 
-  const toggleDay = (dayNum) => {
-    setExpandedDays(prev => ({
-      ...prev,
-      [dayNum]: !prev[dayNum]
-    }));
-  };
 
   // Fetch booking link for a hotel
   const fetchHotelBookingLink = async (hotelName, location) => {
@@ -533,24 +525,6 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
     if (!tripData?.destination) return false;
     const cacheKey = `${name}-${tripData.destination}`;
     return loadingBookingLinks[cacheKey];
-  };
-
-  // Handle PDF download
-  const handleDownloadPDF = async () => {
-    try {
-      console.log('Generating PDF...');
-      await pdfGenerator.generateItineraryPDF(
-        tripData,
-        priceEstimate,
-        weatherData,
-        hotels,
-        restaurants
-      );
-      console.log('PDF generated successfully!');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
-    }
   };
 
   const getImageForLocation = (location, index = 0) => {
@@ -646,7 +620,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
 
   return (
     <div className={`trip-panel ${showTripPanel ? 'mobile-visible' : ''}`}>
-      {/* Header Actions */}
+      {/* Header Actions - Mobile only */}
       <div className="trip-panel-actions">
         <button className="mobile-back-btn" onClick={handleClose} title="Back to chat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -654,19 +628,6 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
           </svg>
           Back
         </button>
-        <div className="desktop-actions">
-          <button className="action-icon-btn" title="Coming soon" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-          <button className="action-icon-btn" title="Coming soon" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-          </button>
-          <button className="review-book-btn">{t.reviewAndBook}</button>
-        </div>
       </div>
 
       <div className="trip-panel-content">
@@ -870,62 +831,93 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <div className="tab-content">
-            <h2 className="section-title">{t.tripOverview}</h2>
-            
-            {/* Quick View Button */}
-            <button className="quick-view-btn">👁 {t.quickView}</button>
-
-            {/* Itinerary Days Counter */}
-            {tripData.itinerary && tripData.itinerary.length > 0 && (
-              <div style={{
-                padding: '0.75rem 1rem',
-                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-                borderRadius: '8px',
-                marginBottom: '1rem',
-                fontSize: '0.9375rem',
-                fontWeight: '500',
-                color: '#4f46e5',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <span style={{ fontSize: '1.25rem' }}>📅</span>
-                <span>{tripData.itinerary.length} {tripData.itinerary.length === 1 ? 'Day' : 'Days'} Itinerary</span>
+            {/* Price Summary Card - Prominent Display */}
+            {priceEstimate && (
+              <div className="price-summary-card">
+                <div className="price-summary-header">
+                  <div className="price-summary-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="price-summary-info">
+                    <span className="price-summary-label">{t.estimatedTotal}</span>
+                    <span className="price-summary-amount">
+                      {priceEstimate.currency}{priceEstimate.min.toLocaleString()} - {priceEstimate.currency}{priceEstimate.max.toLocaleString()}
+                    </span>
+                    {priceEstimate.travelers > 1 && (
+                      <span className="price-summary-per-person">
+                        {priceEstimate.currency}{Math.round(priceEstimate.min / priceEstimate.travelers).toLocaleString()} - {priceEstimate.currency}{Math.round(priceEstimate.max / priceEstimate.travelers).toLocaleString()} {t.perPerson}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="price-breakdown-grid">
+                  <div className="price-breakdown-item">
+                    <span className="breakdown-icon">🏨</span>
+                    <span className="breakdown-label">{t.accommodations}</span>
+                    <span className="breakdown-value">{priceEstimate.currency}{priceEstimate.breakdownMin.accommodation.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.accommodation.toLocaleString()}</span>
+                  </div>
+                  <div className="price-breakdown-item">
+                    <span className="breakdown-icon">🍽️</span>
+                    <span className="breakdown-label">{t.dining}</span>
+                    <span className="breakdown-value">{priceEstimate.currency}{priceEstimate.breakdownMin.dining.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.dining.toLocaleString()}</span>
+                  </div>
+                  <div className="price-breakdown-item">
+                    <span className="breakdown-icon">🎭</span>
+                    <span className="breakdown-label">{t.activities}</span>
+                    <span className="breakdown-value">{priceEstimate.currency}{priceEstimate.breakdownMin.activities.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.activities.toLocaleString()}</span>
+                  </div>
+                  <div className="price-breakdown-item">
+                    <span className="breakdown-icon">🚇</span>
+                    <span className="breakdown-label">{t.transportation}</span>
+                    <span className="breakdown-value">{priceEstimate.currency}{priceEstimate.breakdownMin.transportation.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.transportation.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="price-summary-note">{t.budgetToComfort}</div>
               </div>
             )}
 
-            {/* Itinerary Days - Displaying all days */}
+            {/* Itinerary Timeline - Always Expanded */}
             {tripData.itinerary && tripData.itinerary.length > 0 && (
-              <div className="trip-itinerary">
+              <div className="trip-timeline">
+                <h2 className="timeline-title">
+                  <span className="timeline-title-icon">📅</span>
+                  {tripData.itinerary.length} {tripData.itinerary.length === 1 ? 'Day' : 'Days'} {t.tripOverview}
+                </h2>
+
                 {tripData.itinerary.map((day, index) => (
-                  <div key={`day-${day.day || index}`} className={`day-card ${expandedDays[index] ? 'expanded' : ''}`}>
-                    <div 
-                      className="day-card-header"
-                      onClick={() => toggleDay(index)}
-                    >
-                      <div className="day-header-left">
-                        <span className="day-date">{day.date || `Day ${day.day}`}:</span>
-                        <span className="day-title">{day.title}</span>
+                  <div key={`day-${day.day || index}`} className="timeline-day">
+                    {/* Timeline connector */}
+                    <div className="timeline-connector">
+                      <div className="timeline-dot">
+                        <span className="timeline-day-number">{day.day || index + 1}</span>
                       </div>
-                      <div className="day-header-right">
+                      {index < tripData.itinerary.length - 1 && <div className="timeline-line"></div>}
+                    </div>
+
+                    {/* Day Content */}
+                    <div className="timeline-content">
+                      <div className="timeline-header">
+                        <div className="timeline-header-info">
+                          <span className="timeline-date">{day.date || `Day ${day.day}`}</span>
+                          <h3 className="timeline-day-title">{day.title}</h3>
+                        </div>
                         {(() => {
                           const weather = getWeather(index);
                           return (
-                            <span className="day-weather" title={weather.description}>
-                              {weather.emoji} {convertTemperature(weather.temperature)}{getTemperatureUnit()}
-                            </span>
+                            <div className="timeline-weather" title={weather.description}>
+                              <span className="weather-emoji">{weather.emoji}</span>
+                              <span className="weather-temp">{convertTemperature(weather.temperature)}{getTemperatureUnit()}</span>
+                              {weather.temperatureMin && (
+                                <span className="weather-temp-min">/ {convertTemperature(weather.temperatureMin)}{getTemperatureUnit()}</span>
+                              )}
+                            </div>
                           );
                         })()}
-                        <span className="expand-arrow">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </span>
                       </div>
-                    </div>
-                    
-                    {expandedDays[index] && (
-                      <div className="day-card-content">
+
+                      <div className="timeline-activities">
                         {/* Flight/Transportation */}
                         {day.transportation && (
                           <div className="activity-item">
@@ -1211,14 +1203,11 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
                                           </div>
                                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
-
-            {/* Expand All Button */}
-            <button className="expand-all-btn">{t.expandAll}</button>
           </div>
         )}
 
@@ -1388,80 +1377,21 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
 
       </div>
 
-      {/* Footer with Price and Actions */}
+      {/* Footer - Clean Summary */}
       <div className="trip-panel-footer">
-        <div className="trip-footer-info">
-          <h3>{tripData.duration} {tripData.purpose || 'Solo'} {tripData.destination} {t.trip}</h3>
-          <div className="trip-footer-details">
-            {priceEstimate ? (
-              <>
-                <div className="price-estimate">
-                  <span className="price-label">{t.estimatedTotal}</span>
-                  <span className="price-amount">
-                    {priceEstimate.currency}{priceEstimate.min.toLocaleString()} - {priceEstimate.currency}{priceEstimate.max.toLocaleString()}
-                  </span>
-                  {priceEstimate.travelers > 1 && (
-                    <span className="price-per-person">
-                      ({priceEstimate.currency}{Math.round(priceEstimate.min / priceEstimate.travelers).toLocaleString()} - {priceEstimate.currency}{Math.round(priceEstimate.max / priceEstimate.travelers).toLocaleString()} {t.perPerson})
-                    </span>
-                  )}
-                </div>
-                <span>•</span>
-                <div className="price-breakdown-trigger" title="View breakdown">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  <div className="price-breakdown-tooltip">
-                    <div className="breakdown-header">{t.costBreakdown}</div>
-                    <div className="breakdown-item">
-                      <span>🏨 {t.accommodations}</span>
-                      <span>{priceEstimate.currency}{priceEstimate.breakdownMin.accommodation.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.accommodation.toLocaleString()}</span>
-                    </div>
-                    <div className="breakdown-item">
-                      <span>🍽️ {t.dining}</span>
-                      <span>{priceEstimate.currency}{priceEstimate.breakdownMin.dining.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.dining.toLocaleString()}</span>
-                    </div>
-                    <div className="breakdown-item">
-                      <span>🎭 {t.activities}</span>
-                      <span>{priceEstimate.currency}{priceEstimate.breakdownMin.activities.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.activities.toLocaleString()}</span>
-                    </div>
-                    <div className="breakdown-item">
-                      <span>🚇 {t.transportation}</span>
-                      <span>{priceEstimate.currency}{priceEstimate.breakdownMin.transportation.toLocaleString()} - {priceEstimate.currency}{priceEstimate.breakdownMax.transportation.toLocaleString()}</span>
-                    </div>
-                    <div className="breakdown-total">
-                      <span>{t.totalRange}</span>
-                      <span>{priceEstimate.currency}{priceEstimate.min.toLocaleString()} - {priceEstimate.currency}{priceEstimate.max.toLocaleString()}</span>
-                    </div>
-                    <div className="breakdown-note">
-                      {t.budgetToComfort}
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <span>{t.calculatingPrice}</span>
-            )}
-            <span>•</span>
-            <span>{tripData.dates}</span>
+        <div className="trip-footer-summary">
+          <div className="footer-trip-info">
+            <span className="footer-trip-title">{tripData.duration} {tripData.purpose || 'Trip'} to {tripData.destination}</span>
+            <span className="footer-trip-dates">{tripData.dates} • {tripData.travelers}</span>
           </div>
-        </div>
-        <div className="trip-footer-actions">
-          <button className="footer-btn secondary" disabled title="Coming soon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{width: '16px', height: '16px', marginRight: '6px'}}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            {t.downloadPDF}
-          </button>
-          <button className="footer-btn secondary" disabled title="Coming soon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{width: '16px', height: '16px', marginRight: '6px'}}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-            {t.share}
-          </button>
-          <button className="footer-btn primary">
-            {t.reviewAndBook} {priceEstimate ? `(${priceEstimate.currency}${priceEstimate.min.toLocaleString()}-${priceEstimate.max.toLocaleString()})` : ''}
-          </button>
+          {priceEstimate && (
+            <div className="footer-price-badge">
+              <span className="footer-price-amount">
+                {priceEstimate.currency}{priceEstimate.min.toLocaleString()} - {priceEstimate.currency}{priceEstimate.max.toLocaleString()}
+              </span>
+              <span className="footer-price-label">{t.estimatedTotal}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

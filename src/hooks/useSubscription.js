@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -8,7 +8,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
  * Custom hook to check and manage user subscription status
  */
 export function useSubscription() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuth();
   const [subscriptionStatus, setSubscriptionStatus] = useState({
     loading: true,
     hasSubscription: false,
@@ -34,7 +34,7 @@ export function useSubscription() {
 
       try {
         const response = await axios.get(
-          `${API_URL}/api/subscription/status/${user.id}`
+          `${API_URL}/api/subscription/status/${user.uid}`
         );
 
         if (response.data.success) {
@@ -76,7 +76,7 @@ export function useSubscription() {
 
     try {
       const response = await axios.get(
-        `${API_URL}/api/subscription/status/${user.id}`
+        `${API_URL}/api/subscription/status/${user.uid}`
       );
 
       if (response.data.success) {

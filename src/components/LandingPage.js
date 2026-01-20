@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import { IoSparkles, IoFlash, IoGlobe, IoBulb, IoPhonePortrait, IoWallet, IoAirplane, IoStar, IoPerson, IoBriefcase } from 'react-icons/io5';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -78,21 +78,21 @@ const LandingPage = () => {
       location: 'New York, USA',
       rating: 5,
       text: 'ARYA made planning my European trip so effortless! The AI understood exactly what I wanted and created the perfect itinerary in minutes.',
-      avatar: '👩‍💼'
+      avatar: 'business-woman'
     },
     {
       name: 'Michael Chen',
       location: 'Singapore',
       rating: 5,
       text: 'I was skeptical at first, but this AI travel planner exceeded all my expectations. Best trip planning experience ever!',
-      avatar: '👨‍💻'
+      avatar: 'tech-person'
     },
     {
       name: 'Emma Rodriguez',
       location: 'Barcelona, Spain',
       rating: 5,
       text: 'As a frequent traveler, ARYA has become my go-to tool. It saves me hours of research and always finds hidden gems.',
-      avatar: '✈️'
+      avatar: 'traveler'
     },
     {
       name: 'David Kim',
@@ -134,30 +134,9 @@ const LandingPage = () => {
               <span className="logo-badge">AI Travel</span>
             </div>
             <nav className="nav-menu">
-              <button className="nav-link-btn" onClick={() => navigate('/pricing')}>
-                Pricing
+              <button className="cta-button" onClick={handleGetStarted}>
+                Start Planning
               </button>
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="sign-in-button">Sign In</button>
-                </SignInButton>
-                <button className="cta-button" onClick={handleGetStarted}>
-                  Start Planning
-                </button>
-              </SignedOut>
-              <SignedIn>
-                <button className="cta-button" onClick={handleGetStarted}>
-                  Go to App
-                </button>
-                <UserButton 
-                  afterSignOutUrl="/"
-                  appearance={{
-                    elements: {
-                      avatarBox: "width: 40px; height: 40px;"
-                    }
-                  }}
-                />
-              </SignedIn>
             </nav>
           </div>
         </div>
@@ -215,24 +194,12 @@ const LandingPage = () => {
           </div>
 
           <div className="carousel-cta">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="carousel-action-button">
-                  Plan Your Dream Trip with AI
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <button className="carousel-action-button" onClick={handleGetStarted}>
-                Plan Your Dream Trip with AI
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </button>
-            </SignedIn>
+            <button className="carousel-action-button" onClick={handleGetStarted}>
+              Plan Your Dream Trip with AI
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
           </div>
         </div>
       </section>
@@ -243,7 +210,7 @@ const LandingPage = () => {
           <h2 className="section-title">Why Choose ARYA?</h2>
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">🤖</div>
+              <div className="feature-icon"><IoSparkles className="icon-purple-glow-lg" /></div>
               <h3 className="feature-title">AI-Powered Planning</h3>
               <p className="feature-description">
                 Our advanced AI understands your preferences and creates personalized
@@ -251,7 +218,7 @@ const LandingPage = () => {
               </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">⚡</div>
+              <div className="feature-icon"><IoFlash className="icon-purple-glow-lg" /></div>
               <h3 className="feature-title">Lightning Fast</h3>
               <p className="feature-description">
                 Get a complete travel plan in minutes, not hours. Save time and
@@ -259,7 +226,7 @@ const LandingPage = () => {
               </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">🌍</div>
+              <div className="feature-icon"><IoGlobe className="icon-purple-glow-lg" /></div>
               <h3 className="feature-title">Global Coverage</h3>
               <p className="feature-description">
                 Access recommendations for destinations worldwide, from popular
@@ -267,7 +234,7 @@ const LandingPage = () => {
               </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">💡</div>
+              <div className="feature-icon"><IoBulb className="icon-purple-glow-lg" /></div>
               <h3 className="feature-title">Smart Suggestions</h3>
               <p className="feature-description">
                 Discover activities, restaurants, and attractions you'll love based
@@ -275,7 +242,7 @@ const LandingPage = () => {
               </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">📱</div>
+              <div className="feature-icon"><IoPhonePortrait className="icon-purple-glow-lg" /></div>
               <h3 className="feature-title">Easy to Use</h3>
               <p className="feature-description">
                 Simple, intuitive interface that makes trip planning feel like
@@ -283,7 +250,7 @@ const LandingPage = () => {
               </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">💰</div>
+              <div className="feature-icon"><IoWallet className="icon-purple-glow-lg" /></div>
               <h3 className="feature-title">Budget Friendly</h3>
               <p className="feature-description">
                 Get the best value for your money with smart recommendations that
@@ -346,7 +313,12 @@ const LandingPage = () => {
             {reviews.map((review, index) => (
               <div key={index} className="review-card">
                 <div className="review-header">
-                  <div className="review-avatar">{review.avatar}</div>
+                  <div className="review-avatar">
+                  {review.avatar === 'business-woman' && <IoBriefcase className="icon-purple-glow" />}
+                  {review.avatar === 'tech-person' && <IoPerson className="icon-purple-glow" />}
+                  {review.avatar === 'traveler' && <IoAirplane className="icon-purple-glow" />}
+                  {!['business-woman', 'tech-person', 'traveler'].includes(review.avatar) && <IoPerson className="icon-purple-glow" />}
+                </div>
                   <div className="review-info">
                     <h4 className="review-name">{review.name}</h4>
                     <p className="review-location">{review.location}</p>
@@ -354,7 +326,7 @@ const LandingPage = () => {
                 </div>
                 <div className="review-rating">
                   {[...Array(review.rating)].map((_, i) => (
-                    <span key={i} className="star">⭐</span>
+                    <IoStar key={i} className="star icon-purple-glow" />
                   ))}
                 </div>
                 <p className="review-text">{review.text}</p>
@@ -372,24 +344,12 @@ const LandingPage = () => {
             <p className="cta-subtitle">
               Join thousands of travelers who trust ARYA to plan their perfect trips.
             </p>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="primary-button large">
-                  Start Planning Now
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <button className="primary-button large" onClick={handleGetStarted}>
-                Go to Your Dashboard
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </button>
-            </SignedIn>
+            <button className="primary-button large" onClick={handleGetStarted}>
+              Start Planning Now
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
           </div>
         </div>
       </section>

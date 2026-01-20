@@ -1,0 +1,72 @@
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  font-family: inherit;
+}
+
+/* Link buttons */
+.action-link {
+  background: #f1f3f4;
+  color: #212529;
+}
+
+.action-link:hover {
+  background: #e9ecef;
+  color: #000;
+}
+
+.external-icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* Search buttons */
+.action-search {
+  background: linear-gradient(135deg, #228be6 0%, #1c7ed6 100%);
+  color: white;
+}
+
+.action-search:hover {
+  background: linear-gradient(135deg, #1c7ed6 0%, #1971c2 100%);
+  transform: translateY(-1px);
+}
+
+/* Suggestion buttons */
+.action-suggestion {
+  background: #fff9db;
+  color: #e67700;
+  border: 1px solid #ffe066;
+}
+
+.action-suggestion:hover {
+  background: #fff3bf;
+  border-color: #ffd43b;
+}
+
+.suggestion-icon {
+  font-size: 0.875rem;
+}
+
+/* Button container in messages */
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .action-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}

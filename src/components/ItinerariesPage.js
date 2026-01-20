@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import { itineraryAPI } from '../services/chatService';
+import { IoGlobe, IoLocationSharp, IoMoon, IoAirplane } from 'react-icons/io5';
 import './ItinerariesPage.css';
 
 const ItinerariesPage = () => {
-  const { getToken } = useAuth();
   const navigate = useNavigate();
   const [itineraries, setItineraries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +19,7 @@ const ItinerariesPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await itineraryAPI.getItineraries(getToken);
+      const data = await itineraryAPI.getItineraries();
       const itinerariesArray = data?.itineraries || [];
       setItineraries(itinerariesArray);
       console.log('✅ Loaded', itinerariesArray.length, 'itineraries');
@@ -40,7 +39,7 @@ const ItinerariesPage = () => {
     }
 
     try {
-      await itineraryAPI.deleteItinerary(itineraryId, getToken);
+      await itineraryAPI.deleteItinerary(itineraryId);
       setItineraries(itineraries.filter(it => it._id !== itineraryId));
       console.log('✅ Deleted itinerary:', itineraryId);
     } catch (err) {
@@ -125,21 +124,21 @@ const ItinerariesPage = () => {
           {totalTrips > 0 && (
             <div className="stats-row">
               <div className="stat-card">
-                <div className="stat-icon">🌍</div>
+                <div className="stat-icon"><IoGlobe className="icon-purple-glow-lg" /></div>
                 <div className="stat-info">
                   <div className="stat-value">{totalTrips}</div>
                   <div className="stat-label">{totalTrips === 1 ? 'Trip' : 'Trips'}</div>
                 </div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon">📍</div>
+                <div className="stat-icon"><IoLocationSharp className="icon-purple-glow-lg" /></div>
                 <div className="stat-info">
                   <div className="stat-value">{uniqueDestinations}</div>
                   <div className="stat-label">{uniqueDestinations === 1 ? 'Destination' : 'Destinations'}</div>
                 </div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon">🌙</div>
+                <div className="stat-icon"><IoMoon className="icon-purple-glow-lg" /></div>
                 <div className="stat-info">
                   <div className="stat-value">{totalDays}</div>
                   <div className="stat-label">{totalDays === 1 ? 'Day' : 'Days'}</div>
@@ -172,7 +171,7 @@ const ItinerariesPage = () => {
         {/* Trips Grid or Empty State */}
         {sortedItineraries.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon">✈️</div>
+            <div className="empty-icon"><IoAirplane className="icon-purple-glow-lg" /></div>
             <h2>No trips yet</h2>
             <p>Ready to explore the world? Start planning your first adventure with ARYA.</p>
             <button onClick={() => navigate('/app')} className="create-trip-btn">
