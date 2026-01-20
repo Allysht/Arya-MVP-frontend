@@ -173,20 +173,62 @@
 
 @media (max-width: 600px) {
   .flight-results {
-    padding: 1rem;
+    padding: 0.875rem;
+    margin-top: 0.75rem;
+    border-radius: 12px;
   }
 
   .flights-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 
   .flight-header {
     flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .flight-header h3 {
+    font-size: 1rem;
   }
 
   .flight-date {
-    width: 100%;
-    text-align: center;
-    margin-top: 0.5rem;
+    width: auto;
+    text-align: left;
+    margin-top: 0;
+    padding: 0.1875rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .flight-card {
+    padding: 0.75rem;
+    border-radius: 10px;
+  }
+
+  .departure-time,
+  .arrival-time {
+    font-size: 1.125rem;
+  }
+
+  .times {
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .meta {
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .price {
+    font-size: 1rem;
+    padding-top: 0.5rem;
+  }
+
+  .section-title {
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
   }
 }

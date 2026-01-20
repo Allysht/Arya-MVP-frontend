@@ -5,6 +5,7 @@ export const translations = {
     
     // Chat
     messagePlaceholder: 'Ask me anything about travel...',
+    messagePlaceholderMobile: 'Chat with Arya...',
     newChat: 'New Chat',
     feedback: 'feedback',
     feedbackText: 'We\'d love any suggestions. Click to give',
@@ -113,6 +114,7 @@ export const translations = {
     
     // Chat
     messagePlaceholder: 'Întreabă-mă orice despre călătorii...',
+    messagePlaceholderMobile: 'Vorbește cu Arya...',
     newChat: 'Chat Nou',
     feedback: 'feedback',
     feedbackText: 'Ne-ar plăcea orice sugestii. Apasă pentru a da',
@@ -221,6 +223,7 @@ export const translations = {
     
     // Chat
     messagePlaceholder: 'Pregúntame lo que quieras sobre viajes...',
+    messagePlaceholderMobile: 'Habla con Arya...',
     newChat: 'Nuevo Chat',
     feedback: 'comentarios',
     feedbackText: 'Nos encantaría recibir sugerencias. Haz clic para dar',
@@ -301,6 +304,7 @@ export const translations = {
     
     // Chat
     messagePlaceholder: 'Demandez-moi n\'importe quoi sur les voyages...',
+    messagePlaceholderMobile: 'Parlez avec Arya...',
     newChat: 'Nouveau Chat',
     feedback: 'retour',
     feedbackText: 'Nous aimerions vos suggestions. Cliquez pour donner votre',

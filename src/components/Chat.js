@@ -116,6 +116,14 @@ const getItineraryReadyMessage = (langCode) => {
 const Chat = ({ userPreferences, onChatCreated }) => {
   const t = useTranslations(userPreferences?.language || 'en');
   const { getIdToken, user } = useAuth();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Listen for window resize to update mobile state
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const [messages, setMessages] = useState([
     {
@@ -155,6 +163,7 @@ const Chat = ({ userPreferences, onChatCreated }) => {
   const [showTripFormPopup, setShowTripFormPopup] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const previousFilledFieldsRef = useRef([]);
+  const hasAutoShownPopupRef = useRef(false); // Track if popup was auto-shown at 100%
   const [userId] = useState('anonymous'); // In production, get from auth context
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -177,11 +186,15 @@ const Chat = ({ userPreferences, onChatCreated }) => {
     console.log('🔍 showTripPanel state:', showTripPanel);
   }, [currentTrip, showTripPanel]);
 
-  // Auto-show popup when trip progress reaches 100%
+  // Auto-show popup when trip progress reaches 100% (only once)
   useEffect(() => {
-    if (tripProgress.completionPercentage === 100 && tripProgress.status === 'ready') {
-      console.log('✨ Trip progress at 100% - auto-showing popup');
+    if (tripProgress.completionPercentage === 100 && tripProgress.status === 'ready' && !hasAutoShownPopupRef.current) {
+      hasAutoShownPopupRef.current = true;
       setShowTripFormPopup(true);
+    }
+    // Reset the flag when progress drops below 100% (user cleared a field)
+    if (tripProgress.completionPercentage < 100) {
+      hasAutoShownPopupRef.current = false;
     }
   }, [tripProgress.completionPercentage, tripProgress.status]);
 
@@ -715,15 +728,14 @@ const Chat = ({ userPreferences, onChatCreated }) => {
           setOfferedSuggestions(response.data.offeredSuggestions);
         }
 
-        // Update trip progress from backend response
+        // Update trip progress ID from backend response (percentage is calculated from collectedInfo)
         if (response.data.tripProgress) {
-          console.log('📊 Updating trip progress from backend:', response.data.tripProgress);
+          console.log('📊 Updating trip progress ID from backend:', response.data.tripProgress.id);
+          // Only update the ID - completionPercentage, filledFields, and status are
+          // calculated by the frontend from collectedInfo to avoid race conditions
           setTripProgress(prev => ({
             ...prev,
-            id: response.data.tripProgress.id || prev.id,
-            completionPercentage: response.data.tripProgress.completionPercentage,
-            filledFields: response.data.tripProgress.filledFields,
-            status: response.data.tripProgress.status
+            id: response.data.tripProgress.id || prev.id
           }));
         }
 
@@ -1503,7 +1515,7 @@ Start your response with { and end with }`;
               <textarea
                 ref={textareaRef}
                 className="message-input"
-                placeholder={t.messagePlaceholder}
+                placeholder={isMobile ? (t.messagePlaceholderMobile || t.messagePlaceholder) : t.messagePlaceholder}
                 value={inputMessage}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
