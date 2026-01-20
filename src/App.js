@@ -195,6 +195,20 @@ function ChatApp() {
               <span className="btn-label">My Trips</span>
             </button>
 
+            {/* Post Your Listings Button */}
+            <a
+              href="https://oneclicktravel.net"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="header-btn header-btn-listings"
+              title="Post Your Listings"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span className="btn-label">Post Listings</span>
+            </a>
+
             {/* Language Selector */}
             <div className="preference-dropdown" ref={languageDropdownRef}>
               <button

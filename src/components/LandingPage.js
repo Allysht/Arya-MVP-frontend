@@ -134,6 +134,14 @@ const LandingPage = () => {
               <span className="logo-badge">AI Travel</span>
             </div>
             <nav className="nav-menu">
+              <a
+                href="https://oneclicktravel.net"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-listings-btn"
+              >
+                Post Your Listings
+              </a>
               <button className="cta-button" onClick={handleGetStarted}>
                 Start Planning
               </button>
@@ -200,6 +208,40 @@ const LandingPage = () => {
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Post Your Listings Banner */}
+      <section className="listings-banner-section">
+        <div className="landing-container">
+          <div className="listings-banner">
+            <div className="listings-banner-content">
+              <div className="listings-banner-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+              </div>
+              <div className="listings-banner-text">
+                <h3 className="listings-banner-title">Are You a Property Owner or Travel Business?</h3>
+                <p className="listings-banner-description">
+                  List your hotels, vacation rentals, tours, and experiences on our platform.
+                  Reach thousands of travelers planning their next adventure with ARYA.
+                </p>
+              </div>
+            </div>
+            <a
+              href="https://oneclicktravel.net"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="listings-banner-btn"
+            >
+              Post Your Listings
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M7 17L17 7M17 7H7M17 7v10"/>
+              </svg>
+            </a>
           </div>
         </div>
       </section>

@@ -684,3 +684,54 @@
   color: #666;
 }
 
+/* Post Your Listings Button */
+.header-btn-listings {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  text-decoration: none;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-btn-listings:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
+  color: white;
+}
+
+.header-btn-listings svg {
+  width: 16px;
+  height: 16px;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .header-btn-listings {
+    padding: 0.5rem 0.625rem;
+  }
+
+  .header-btn-listings .btn-label {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-btn-listings {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .header-btn-listings svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+

@@ -116,6 +116,29 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
+/* Nav Listings Button */
+.nav-listings-btn {
+  background: transparent;
+  color: #8b5cf6;
+  border: 2px solid #8b5cf6;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-listings-btn:hover {
+  background: #8b5cf6;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
 .user-profile-section {
   display: flex;
   align-items: center;
@@ -836,5 +859,167 @@
   .carousel-action-button {
     padding: 20px 40px;
     font-size: 16px;
+  }
+
+  .nav-listings-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+/* Post Your Listings Banner Section */
+.listings-banner-section {
+  padding: 60px 0;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+}
+
+.listings-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border-radius: 24px;
+  padding: 48px 56px;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+  border: 2px solid rgba(139, 92, 246, 0.1);
+  gap: 40px;
+}
+
+.listings-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex: 1;
+}
+
+.listings-banner-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+}
+
+.listings-banner-icon svg {
+  color: white;
+}
+
+.listings-banner-text {
+  flex: 1;
+}
+
+.listings-banner-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #000;
+  margin: 0 0 12px;
+  letter-spacing: -1px;
+}
+
+.listings-banner-description {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.listings-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  padding: 20px 40px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 18px;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.listings-banner-btn:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.4);
+}
+
+.listings-banner-btn svg {
+  transition: transform 0.3s;
+}
+
+.listings-banner-btn:hover svg {
+  transform: translate(4px, -4px);
+}
+
+@media (max-width: 1024px) {
+  .listings-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 40px 32px;
+  }
+
+  .listings-banner-content {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .listings-banner-title {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .listings-banner-section {
+    padding: 40px 0;
+  }
+
+  .listings-banner {
+    padding: 32px 24px;
+  }
+
+  .listings-banner-icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .listings-banner-icon svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .listings-banner-title {
+    font-size: 22px;
+  }
+
+  .listings-banner-description {
+    font-size: 15px;
+  }
+
+  .listings-banner-btn {
+    padding: 16px 32px;
+    font-size: 16px;
+  }
+
+  .nav-listings-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .listings-banner-title {
+    font-size: 20px;
+  }
+
+  .listings-banner-btn {
+    padding: 14px 28px;
+    font-size: 15px;
   }
 }
