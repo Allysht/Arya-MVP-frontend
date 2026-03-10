@@ -145,7 +145,8 @@ const Chat = ({ userPreferences, onChatCreated }) => {
     travelers: null,
     dates: null,
     duration: null,
-    purpose: null
+    purpose: null,
+    budget: null
   });
   const [currentSlot, setCurrentSlot] = useState('destination'); // Track current slot being filled
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false); // Track confirmation state
@@ -203,7 +204,7 @@ const Chat = ({ userPreferences, onChatCreated }) => {
     const filledFields = Object.keys(collectedInfo).filter(
       key => collectedInfo[key] && collectedInfo[key].toString().trim() !== ''
     );
-    const completionPercentage = Math.round((filledFields.length / 6) * 100);
+    const completionPercentage = Math.round((filledFields.length / 7) * 100);
 
     // Detect if new fields were extracted
     const previousFields = previousFilledFieldsRef.current;
@@ -585,7 +586,9 @@ const Chat = ({ userPreferences, onChatCreated }) => {
         if (result.travelData) {
           enrichedItinerary = {
             ...result.itinerary,
-            itinerary: enrichItineraryWithRealData(result.itinerary.itinerary, result.travelData)
+            itinerary: enrichItineraryWithRealData(result.itinerary.itinerary, result.travelData),
+            hotels: result.travelData.hotels || [],
+            restaurants: result.travelData.restaurants || []
           };
         }
 

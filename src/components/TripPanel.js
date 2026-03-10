@@ -222,11 +222,13 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
         return;
       }
 
-      // Otherwise, fetch comprehensive accommodations data from API
+      // Otherwise, fetch comprehensive accommodations data from API (budget-aware)
       try {
         console.log('Fetching accommodations for:', tripData.destination);
+        const durationDays = tripData.itinerary?.length || parseInt(tripData.duration?.match(/\d+/)?.[0]) || 5;
+        const budgetParam = tripData.budget ? `&budget=${encodeURIComponent(tripData.budget)}` : '';
         const response = await axios.get(
-          `${config.API_URL}/api/accommodations/${encodeURIComponent(tripData.destination)}?hotelLimit=8&restaurantLimit=8`
+          `${config.API_URL}/api/accommodations/${encodeURIComponent(tripData.destination)}?hotelLimit=8&restaurantLimit=8&durationInDays=${durationDays}${budgetParam}`
         );
         
         if (response.data.success) {
@@ -299,116 +301,113 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
     }
 
     const calculatePrice = () => {
-      // Create min and max breakdowns for price range
-      const breakdownMin = {
-        accommodation: 0,
-        dining: 0,
-        activities: 0,
-        transportation: 0
-      };
-      const breakdownMax = {
-        accommodation: 0,
-        dining: 0,
-        activities: 0,
-        transportation: 0
-      };
-
-      // Get number of days
       const numDays = tripData.itinerary?.length || parseInt(tripData.duration?.match(/\d+/)?.[0]) || 5;
 
-      // Calculate accommodation costs (per night) - Budget vs Comfort
+      // --- Budget-aware calculation ---
+      // If the user stated a budget, distribute it realistically across categories.
+      const budgetStr = tripData.budget;
+      if (budgetStr) {
+        // Parse numeric amount from strings like "2000 euros", "$1500", "1500 RON"
+        const numMatch = budgetStr.match(/(\d[\d,\.]*)/);
+        if (numMatch) {
+          let totalBudget = parseFloat(numMatch[1].replace(/,/g, ''));
+          // Normalize to EUR
+          const lower = budgetStr.toLowerCase();
+          if (/\$|usd|dollar/.test(lower)) totalBudget *= 0.92;
+          if (/gbp|pound|£/.test(lower)) totalBudget *= 1.17;
+          if (/ron|lei/.test(lower)) totalBudget *= 0.20;
+
+          // Split the budget: 40% accommodation, 25% dining, 20% activities, 15% transport
+          const accommodation = Math.round(totalBudget * 0.40);
+          const dining = Math.round(totalBudget * 0.25);
+          const activities = Math.round(totalBudget * 0.20);
+          const transportation = Math.round(totalBudget * 0.15);
+
+          // Show a ±10% range around each allocation
+          setPriceEstimate({
+            min: convertCurrency(Math.round(totalBudget * 0.90)),
+            max: convertCurrency(Math.round(totalBudget * 1.10)),
+            breakdownMin: {
+              accommodation: convertCurrency(Math.round(accommodation * 0.90)),
+              dining: convertCurrency(Math.round(dining * 0.90)),
+              activities: convertCurrency(Math.round(activities * 0.90)),
+              transportation: convertCurrency(Math.round(transportation * 0.90))
+            },
+            breakdownMax: {
+              accommodation: convertCurrency(Math.round(accommodation * 1.10)),
+              dining: convertCurrency(Math.round(dining * 1.10)),
+              activities: convertCurrency(Math.round(activities * 1.10)),
+              transportation: convertCurrency(Math.round(transportation * 1.10))
+            },
+            currency: getCurrencySymbol(),
+            travelers: parseInt(tripData.travelers?.match(/\d+/)?.[0]) || 1
+          });
+          return;
+        }
+      }
+
+      // --- Fallback: rating-based estimation (no budget stated) ---
+      const breakdownMin = { accommodation: 0, dining: 0, activities: 0, transportation: 0 };
+      const breakdownMax = { accommodation: 0, dining: 0, activities: 0, transportation: 0 };
+
       if (tripData.itinerary) {
         tripData.itinerary.forEach(day => {
           if (day.accommodation) {
             if (typeof day.accommodation === 'object' && day.accommodation.rating) {
               const rating = day.accommodation.rating;
-              if (rating >= 4.5) {
-                breakdownMin.accommodation += 120;
-                breakdownMax.accommodation += 200;
-              } else if (rating >= 4.0) {
-                breakdownMin.accommodation += 80;
-                breakdownMax.accommodation += 140;
-              } else if (rating >= 3.5) {
-                breakdownMin.accommodation += 50;
-                breakdownMax.accommodation += 100;
-              } else {
-                breakdownMin.accommodation += 35;
-                breakdownMax.accommodation += 70;
-              }
+              if (rating >= 4.5) { breakdownMin.accommodation += 120; breakdownMax.accommodation += 200; }
+              else if (rating >= 4.0) { breakdownMin.accommodation += 80; breakdownMax.accommodation += 140; }
+              else if (rating >= 3.5) { breakdownMin.accommodation += 50; breakdownMax.accommodation += 100; }
+              else { breakdownMin.accommodation += 35; breakdownMax.accommodation += 70; }
             } else {
-              breakdownMin.accommodation += 50;
-              breakdownMax.accommodation += 90;
+              breakdownMin.accommodation += 50; breakdownMax.accommodation += 90;
             }
           }
         });
       } else {
         if (hotels && hotels.length > 0) {
           const avgRating = hotels.reduce((sum, h) => sum + (h.rating || 4), 0) / hotels.length;
-          if (avgRating >= 4.5) {
-            breakdownMin.accommodation = 120 * numDays;
-            breakdownMax.accommodation = 200 * numDays;
-          } else if (avgRating >= 4.0) {
-            breakdownMin.accommodation = 80 * numDays;
-            breakdownMax.accommodation = 140 * numDays;
-          } else {
-            breakdownMin.accommodation = 50 * numDays;
-            breakdownMax.accommodation = 100 * numDays;
-          }
+          if (avgRating >= 4.5) { breakdownMin.accommodation = 120 * numDays; breakdownMax.accommodation = 200 * numDays; }
+          else if (avgRating >= 4.0) { breakdownMin.accommodation = 80 * numDays; breakdownMax.accommodation = 140 * numDays; }
+          else { breakdownMin.accommodation = 50 * numDays; breakdownMax.accommodation = 100 * numDays; }
         } else {
-          breakdownMin.accommodation = 50 * numDays;
-          breakdownMax.accommodation = 90 * numDays;
+          breakdownMin.accommodation = 50 * numDays; breakdownMax.accommodation = 90 * numDays;
         }
       }
 
-      // Calculate dining costs (3 meals per day) - Budget vs Comfort
       if (tripData.itinerary) {
         tripData.itinerary.forEach(day => {
-          // Budget: Simple meals (€20-25/day), Comfort: Nice restaurants (€40-60/day)
           if (day.dining) {
             if (typeof day.dining === 'object' && day.dining.rating) {
               const rating = day.dining.rating;
-              if (rating >= 4.5) {
-                breakdownMin.dining += 30;
-                breakdownMax.dining += 50;
-              } else if (rating >= 4.0) {
-                breakdownMin.dining += 25;
-                breakdownMax.dining += 40;
-              } else {
-                breakdownMin.dining += 20;
-                breakdownMax.dining += 30;
-              }
-            } else {
-              breakdownMin.dining += 20;
-              breakdownMax.dining += 35;
-            }
+              if (rating >= 4.5) { breakdownMin.dining += 30; breakdownMax.dining += 50; }
+              else if (rating >= 4.0) { breakdownMin.dining += 25; breakdownMax.dining += 40; }
+              else { breakdownMin.dining += 20; breakdownMax.dining += 30; }
+            } else { breakdownMin.dining += 20; breakdownMax.dining += 35; }
           }
-          // Add breakfast + lunch
-          breakdownMin.dining += 15; // €15 for budget meals
-          breakdownMax.dining += 25; // €25 for nicer meals
+          breakdownMin.dining += 15;
+          breakdownMax.dining += 25;
         });
       } else {
-        breakdownMin.dining = 30 * numDays; // Budget: €30/day
-        breakdownMax.dining = 60 * numDays; // Comfort: €60/day
+        breakdownMin.dining = 30 * numDays;
+        breakdownMax.dining = 60 * numDays;
       }
 
-      // Calculate activities costs - Budget vs Comfort
       if (tripData.itinerary) {
         tripData.itinerary.forEach(day => {
           if (day.activities && day.activities.length > 0) {
-            breakdownMin.activities += day.activities.length * 10; // Budget: €10 per activity
-            breakdownMax.activities += day.activities.length * 30; // Comfort: €30 per activity
+            breakdownMin.activities += day.activities.length * 10;
+            breakdownMax.activities += day.activities.length * 30;
           }
         });
       } else {
-        breakdownMin.activities = numDays * 2 * 10; // Budget: 2 activities/day at €10
-        breakdownMax.activities = numDays * 2 * 30; // Comfort: 2 activities/day at €30
+        breakdownMin.activities = numDays * 2 * 10;
+        breakdownMax.activities = numDays * 2 * 30;
       }
 
-      // Transportation estimate (local transport)
-      breakdownMin.transportation = numDays * 8; // Budget: €8/day (public transport)
-      breakdownMax.transportation = numDays * 20; // Comfort: €20/day (taxis, etc)
+      breakdownMin.transportation = numDays * 8;
+      breakdownMax.transportation = numDays * 20;
 
-      // Calculate totals
       const totalMin = breakdownMin.accommodation + breakdownMin.dining + breakdownMin.activities + breakdownMin.transportation;
       const totalMax = breakdownMax.accommodation + breakdownMax.dining + breakdownMax.activities + breakdownMax.transportation;
 

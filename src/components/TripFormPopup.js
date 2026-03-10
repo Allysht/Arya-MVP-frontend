@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IoLocationSharp, IoHome, IoPeople, IoCalendar, IoTimer, IoFlag, IoSparkles, IoBulb } from 'react-icons/io5';
+import { IoLocationSharp, IoHome, IoPeople, IoCalendar, IoTimer, IoFlag, IoSparkles, IoBulb, IoWallet } from 'react-icons/io5';
 import './TripFormPopup.css';
 
 const FIELD_CONFIG = {
@@ -50,6 +50,12 @@ const FIELD_CONFIG = {
       { value: 'solo', label: { en: 'Solo', ro: 'Singur' } },
       { value: 'shopping', label: { en: 'Shopping', ro: 'Cumparaturi' } }
     ]
+  },
+  budget: {
+    label: { en: 'Budget', ro: 'Buget' },
+    placeholder: { en: 'e.g. 3000 euros, $500/person, luxury', ro: 'ex: 3000 euro, buget redus, lux' },
+    icon: IoWallet,
+    type: 'text'
   }
 };
 
@@ -68,7 +74,8 @@ const TripFormPopup = ({
     travelers: '',
     dates: '',
     duration: '',
-    purpose: ''
+    purpose: '',
+    budget: ''
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -82,7 +89,8 @@ const TripFormPopup = ({
         travelers: tripData.travelers || '',
         dates: tripData.dates || '',
         duration: tripData.duration || '',
-        purpose: tripData.purpose || ''
+        purpose: tripData.purpose || '',
+        budget: tripData.budget || ''
       });
     }
   }, [tripData]);
@@ -132,8 +140,9 @@ const TripFormPopup = ({
     return formData[field] && formData[field].toString().trim() !== '';
   };
 
-  const filledCount = Object.keys(formData).filter(f => isFieldFilled(f)).length;
-  const completionPercentage = Math.round((filledCount / 6) * 100);
+  const requiredFields = ['destination', 'origin', 'travelers', 'dates', 'duration', 'purpose', 'budget'];
+  const filledCount = requiredFields.filter(f => isFieldFilled(f)).length;
+  const completionPercentage = Math.round((filledCount / requiredFields.length) * 100);
   const canCreate = completionPercentage === 100;
 
   if (!isOpen) return null;
@@ -167,7 +176,7 @@ const TripFormPopup = ({
                 <span className="progress-text">{completionPercentage}%</span>
               </div>
               <span className="progress-label">
-                {filledCount}/6 {language === 'ro' ? 'complete' : 'complete'}
+                {filledCount}/{requiredFields.length} {language === 'ro' ? 'complete' : 'complete'}
               </span>
             </div>
           </div>
@@ -254,7 +263,7 @@ const TripFormPopup = ({
               ? (language === 'ro' ? 'Se creeaza...' : 'Creating...')
               : canCreate
                 ? (language === 'ro' ? <><IoSparkles className="icon-purple-glow" style={{ marginRight: '6px' }} /> Creeaza Calatoria</> : <><IoSparkles className="icon-purple-glow" style={{ marginRight: '6px' }} /> Create Trip</>)
-                : (language === 'ro' ? `Completeaza inca ${6 - filledCount} campuri` : `Fill ${6 - filledCount} more fields`)}
+                : (language === 'ro' ? `Completeaza inca ${requiredFields.length - filledCount} campuri` : `Fill ${requiredFields.length - filledCount} more fields`)}
           </button>
         </div>
       </div>
