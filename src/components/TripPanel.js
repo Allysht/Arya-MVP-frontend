@@ -14,6 +14,7 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
   const [flightRouting, setFlightRouting] = useState(null);
   const [hotels, setHotels] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
+  const [karpatenHotels, setKarpatenHotels] = useState([]);
   const [weatherData, setWeatherData] = useState(null);
   const [priceEstimate, setPriceEstimate] = useState(null);
   const [hotelBookingLinks, setHotelBookingLinks] = useState({});
@@ -210,6 +211,12 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
       if (hasHotels) {
         console.log('Using hotels from tripData:', tripData.hotels.length);
         setHotels(tripData.hotels);
+      }
+
+      // Karpaten operator hotels (real availability)
+      if (tripData.karpatenHotels && tripData.karpatenHotels.length > 0) {
+        console.log('Using Karpaten hotels from tripData:', tripData.karpatenHotels.length);
+        setKarpatenHotels(tripData.karpatenHotels);
       }
 
       if (hasRestaurants) {
@@ -1286,6 +1293,104 @@ const TripPanel = ({ tripData, onClose, showTripPanel, setShowTripPanel, userPre
                 </svg>
                 <p>{t.loadingHotels}</p>
               </div>
+            )}
+
+            {/* Karpaten Operator Hotels */}
+            {karpatenHotels.length > 0 && (
+              <>
+                <h2 className="section-title" style={{marginTop: '3rem'}}>
+                  🏷️ Operator Packages — {tripData.destination}
+                </h2>
+                <p className="accommodations-subtitle">
+                  {karpatenHotels.length} hotel{karpatenHotels.length !== 1 ? 's' : ''} available via travel operator
+                </p>
+                <div className="hotels-grid">
+                  {karpatenHotels.map((hotel, index) => (
+                    <div key={hotel.id || index} className="hotel-card">
+                      {/* Image or placeholder */}
+                      {hotel.images && hotel.images.length > 0 ? (
+                        <div className="hotel-image">
+                          <img src={hotel.images[0]} alt={hotel.name} loading="lazy" />
+                          {hotel.stars > 0 && (
+                            <div className="hotel-rating-badge">
+                              <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                              <span>{hotel.stars.toFixed(1)}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="accommodation-placeholder">
+                          <svg className="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                            <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                          </svg>
+                        </div>
+                      )}
+
+                      <div className="hotel-info">
+                        <h3 className="hotel-name">{hotel.name}</h3>
+
+                        {/* Location */}
+                        {(hotel.resort || hotel.country) && (
+                          <p className="hotel-address">
+                            📍 {[hotel.resort, hotel.country].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+
+                        {/* Stars */}
+                        {hotel.stars > 0 && (
+                          <p className="hotel-address" style={{letterSpacing: '1px'}}>
+                            {'★'.repeat(Math.round(hotel.stars))}{'☆'.repeat(Math.max(0, 5 - Math.round(hotel.stars)))}
+                          </p>
+                        )}
+
+                        {/* Price */}
+                        {hotel.price > 0 && (
+                          <p className="hotel-address" style={{fontWeight: 600, color: 'var(--accent-color, #e67e22)'}}>
+                            💶 {hotel.price} {hotel.currency || 'EUR'}
+                            {hotel.nights > 0 ? ` / ${hotel.nights} nopți` : ''}
+                            {hotel.isPackage ? ' (pachet)' : ''}
+                          </p>
+                        )}
+
+                        {/* Meal plan */}
+                        {hotel.mealType && (
+                          <p className="hotel-address">🍽️ {hotel.mealType}</p>
+                        )}
+
+                        {/* Description */}
+                        {hotel.description && (
+                          <p className="hotel-address" style={{fontSize: '0.78rem', marginTop: '0.3rem', opacity: 0.85}}>
+                            {hotel.description.length > 140 ? hotel.description.slice(0, 140) + '…' : hotel.description}
+                          </p>
+                        )}
+
+                        {/* Book button */}
+                        {hotel.bookingUrl && (
+                          <div className="hotel-actions" style={{marginTop: '0.75rem'}}>
+                            <a
+                              href={hotel.bookingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hotel-action-btn google-maps-btn-full"
+                              style={{background: 'linear-gradient(135deg, #e67e22, #d35400)'}}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                              </svg>
+                              <span>Vezi pe Karpaten.ro</span>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {/* Restaurants Section */}
