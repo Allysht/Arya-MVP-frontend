@@ -588,7 +588,8 @@ const Chat = ({ userPreferences, onChatCreated }) => {
             ...result.itinerary,
             itinerary: enrichItineraryWithRealData(result.itinerary.itinerary, result.travelData),
             hotels: result.travelData.hotels || [],
-            restaurants: result.travelData.restaurants || []
+            restaurants: result.travelData.restaurants || [],
+            karpatenHotels: result.travelData.karpatenHotels || []
           };
         }
 
